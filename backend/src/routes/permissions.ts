@@ -3,7 +3,7 @@ import { authenticateToken } from '../middleware/auth';
 import supabaseAdmin from '../config/supabase';
 import { PERMISSION_RESOURCES, createPermissionName } from '../utils/permissionResources';
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 
 const router = Router();
 
@@ -132,9 +132,9 @@ router.get('/me', authenticateToken, async (req, res) => {
             return res.status(403).json({ success: false, error: 'Missing user context' });
         }
         const permissions = await getUserPermissions(userId);
-        res.json({ success: true, data: permissions });
+        return res.json({ success: true, data: permissions });
     } catch (error: any) {
-        res.status(500).json({ success: false, error: error.message || 'Failed to fetch user permissions' });
+        return res.status(500).json({ success: false, error: error.message || 'Failed to fetch user permissions' });
     }
 });
 

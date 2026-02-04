@@ -172,7 +172,7 @@ router.delete('/:id', requirePermission('users.delete'), async (req, res) => {
             console.error('Failed to delete user from database:', dbError);
         }
 
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error: any) {
         return res.status(500).json({ success: false, error: error.message || 'Failed to delete user' });
     }
