@@ -1,0 +1,349 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useRef, useState, type FormEvent } from 'react';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm';
+
+const plans = [
+    {
+        name: 'Starter',
+        price: '0',
+        period: 'per user/month',
+        description: 'Get your team started with a free trial of the CRM experience.',
+        features: [
+            'Unlimited contacts',
+            'Lead & deal pipelines',
+            'Email & SMS activity log',
+            'Community support'
+        ]
+    },
+    {
+        name: 'Growth',
+        price: '49',
+        period: 'per user/month',
+        description: 'Automate processes and drive revenue with advanced insights.',
+        features: [
+            'Custom workflows',
+            'Priority support',
+            'Reports & dashboards',
+            'Portal access controls'
+        ],
+        highlighted: true
+    },
+    {
+        name: 'Enterprise',
+        price: '149',
+        period: 'per user/month',
+        description: 'Designed for large operations that need full governance.',
+        features: [
+            'Dedicated success manager',
+            'Advanced permissions',
+            'SLA-backed uptime',
+            'Custom integrations'
+        ]
+    }
+];
+
+const platformHighlights = [
+    'Secure by design with audit trails, roles, and permissions',
+    'Automations mirror how your teams work out of the box',
+    'AI-powered data capture for documents, licenses, and compliance',
+    'Shared portals so customers self-serve when it makes sense'
+];
+
+const testimonialHighlights = [
+    'Adaptive dashboards for finance, tax, and compliance teams',
+    'Built-in documents with upload, versioning, and approvals',
+    'Multi-source activity logs from email, SMS, and portals',
+    'Journeys for compliance, renewals, and onboarding'
+];
+
+type TrialForm = {
+    plan: string;
+    contact_name: string;
+    company_name: string;
+    email: string;
+    phone: string;
+    message: string;
+};
+
+export default function LandingPage() {
+    const [formData, setFormData] = useState<TrialForm>({
+        plan: plans[1].name,
+        contact_name: '',
+        company_name: '',
+        email: '',
+        phone: '',
+        message: ''
+    });
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [statusMessage, setStatusMessage] = useState('');
+    const formRef = useRef<HTMLDivElement | null>(null);
+
+    const handleTrialSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setStatus('loading');
+        setStatusMessage('');
+        try {
+            await axios.post(`${API_BASE}/subscriptions`, {
+                plan_name: formData.plan,
+                contact_name: formData.contact_name,
+                company_name: formData.company_name,
+                email: formData.email,
+                phone: formData.phone,
+                message: formData.message
+            });
+
+            await axios.post(`${API_BASE}/analytics/events`, {
+                event_name: 'trial_interest',
+                metadata: {
+                    plan: formData.plan,
+                    company_name: formData.company_name
+                }
+            });
+
+            setStatus('success');
+            setStatusMessage('Thanks! A member from our sales team will reach out within one business day.');
+            setFormData((prev) => ({
+                ...prev,
+                contact_name: '',
+                company_name: '',
+                email: '',
+                phone: '',
+                message: ''
+            }));
+        } catch (error: any) {
+            setStatus('error');
+            setStatusMessage(error?.response?.data?.error || error.message || 'Something went wrong. Please try again.');
+        }
+    };
+    const navigate = useNavigate();
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+    const [planNotice, setPlanNotice] = useState(false);
+    const plansRef = useRef<HTMLDivElement | null>(null);
+
+    const handlePlanSelection = (planName: string) => {
+        setSelectedPlan(planName);
+        setPlanNotice(false);
+        setFormData((prev) => ({ ...prev, plan: planName }));
+        formRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const handleCreateAccountClick = () => {
+        if (!selectedPlan) {
+            plansRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setPlanNotice(true);
+            return;
+        }
+        navigate(`/login?mode=signup&plan=${encodeURIComponent(selectedPlan)}`);
+    };
+    return (
+        <div className="min-h-screen bg-black text-white">
+            <section className="relative isolate overflow-hidden bg-black px-6 py-20 md:py-28">
+                <div className="mx-auto max-w-6xl lg:flex lg:items-center lg:gap-10 surface-panel py-12 px-10">
+                    <div className="max-w-2xl space-y-6">
+                        <p className="text-sm uppercase tracking-[0.4em] text-primary-300">DocuFlow CRM</p>
+                        <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+                            Build stronger customer relationships and close more deals.
+                        </h1>
+                        <p className="text-lg text-slate-200">
+                            A modern, scalable SaaS CRM built for finance, tax, and professional services teams.
+                            Manage leads, customers, documents, and teams from a unified, secure platform.
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            onClick={handleCreateAccountClick}
+                            className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase text-slate-900 shadow-lg shadow-white/30 transition hover:bg-gray-100"
+                        >
+                            Create an account
+                        </button>
+                        <Link
+                            to="/login"
+                            className="inline-flex items-center justify-center rounded-full border border-white/60 px-6 py-3 text-sm font-semibold uppercase text-white transition hover:border-white hover:bg-white/10"
+                        >
+                            Log in
+                        </Link>
+                        </div>
+                    </div>
+                    <div className="mt-10 flex-1 surface-panel-muted p-8 lg:mt-0">
+                        <p className="text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Trusted by</p>
+                        <div className="mt-6 grid grid-cols-3 gap-4 text-xs font-bold uppercase text-white/70 sm:grid-cols-3">
+                            {['Atlas Legal', 'Northwind Consulting', 'Apex Tax', 'Sawa Finance'].map((brand) => (
+                                <span key={brand} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-center">
+                                    {brand}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="mt-8 rounded-2xl border border-white/10 bg-white/10 px-6 py-5 text-sm text-white/70">
+                            <p className="font-semibold text-white">“DocuFlow gives us a complete 360° customer view—teams hit SLA targets faster.”</p>
+                            <p className="mt-2 text-xs uppercase tracking-[0.4em] text-white/60">Finance Teams • UAE</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="px-6 py-20 md:py-28">
+                <div ref={plansRef} id="plans-section" className="mx-auto max-w-6xl surface-panel py-10 px-8">
+                    <div className="grid gap-10 md:grid-cols-3">
+                        {plans.map((plan) => (
+                            <div
+                                key={plan.name}
+                                className={`flex h-full flex-col gap-6 rounded-3xl surface-panel-muted px-6 py-8 border border-white/10 transition ${plan.highlighted ? 'border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.7)]' : ''}`}
+                            >
+                                <header>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">{plan.name}</p>
+                                    <div className="mt-4 flex items-baseline gap-2">
+                                        <span className="text-5xl font-bold text-white">${plan.price}</span>
+                                        <span className="text-sm text-white/80">{plan.period}</span>
+                                    </div>
+                                    <p className="mt-3 text-sm text-white/70">{plan.description}</p>
+                                </header>
+                                <div className="flex-1">
+                                    <ul className="space-y-3 text-sm">
+                                        {plan.features.map((feature) => (
+                                            <li key={feature} className="flex items-start gap-2 text-white/80">
+                                                <span className="mt-0.5 h-2 w-2 rounded-full bg-white/80" />
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePlanSelection(plan.name)}
+                                    className={`inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase transition ${
+                                        plan.highlighted
+                                            ? 'bg-white text-slate-900 hover:bg-slate-100'
+                                            : 'border border-white/60 text-white hover:border-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {selectedPlan === plan.name ? 'Selected' : 'Select plan'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+            {planNotice && (
+                <div className="fixed bottom-6 right-6 rounded-xl bg-white/5 px-5 py-3 text-sm text-white shadow-2xl border border-white/10 backdrop-blur-md">
+                    Select a plan before creating an account.
+                </div>
+            )}
+
+            <section className="px-6 py-16 md:py-24">
+                <div ref={formRef} className="mx-auto max-w-5xl surface-panel p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+                    <div className="md:flex md:items-center md:justify-between">
+                        <div>
+                            <p className="text-sm uppercase tracking-[0.4em] text-primary-300">Request a trial</p>
+                            <h2 className="mt-3 text-3xl font-bold text-white">Start your team onboarding in minutes.</h2>
+                            <p className="mt-2 text-sm text-slate-200">Tell us about your preferred plan and we’ll guide you through onboarding, migrations, and integrations.</p>
+                        </div>
+                        <div className="mt-6 text-sm text-white/70 md:mt-0">
+                            Tracking conversion improves our service quality. You can opt-out anytime.
+                        </div>
+                    </div>
+                    <form onSubmit={handleTrialSubmit} className="mt-8 grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Plan</label>
+                            <select
+                                value={formData.plan}
+                                onChange={(event) => setFormData((prev) => ({ ...prev, plan: event.target.value }))}
+                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                            >
+                                {plans.map((plan) => (
+                                    <option key={plan.name} value={plan.name}>
+                                        {plan.name} — ${plan.price}/{plan.period}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Email</label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                required
+                                onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
+                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Company</label>
+                            <input
+                                type="text"
+                                value={formData.company_name}
+                                onChange={(event) => setFormData((prev) => ({ ...prev, company_name: event.target.value }))}
+                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Contact name</label>
+                            <input
+                                type="text"
+                                value={formData.contact_name}
+                                onChange={(event) => setFormData((prev) => ({ ...prev, contact_name: event.target.value }))}
+                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Phone</label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))}
+                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                            />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">What are you trying to achieve?</label>
+                            <textarea
+                                value={formData.message}
+                                onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
+                                className="w-full rounded-2xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
+                                rows={3}
+                                placeholder="Share your goals, a timeline, or migration questions."
+                            />
+                        </div>
+                        <div className="md:col-span-2 mt-1 flex flex-col gap-3">
+                            <button
+                                type="submit"
+                                disabled={status === 'loading'}
+                                className="inline-flex justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase text-slate-900 transition hover:bg-slate-100 disabled:opacity-50"
+                            >
+                                {status === 'loading' ? 'Sending...' : 'Request trial'}
+                            </button>
+                            {statusMessage && (
+                                <p className={`text-sm ${status === 'error' ? 'text-red-400' : 'text-green-300'}`}>
+                                    {statusMessage}
+                                </p>
+                            )}
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section className="px-6 py-20 md:py-28">
+                <div className="mx-auto max-w-4xl text-center">
+                    <p className="text-sm uppercase tracking-[0.4em] text-primary-400">Platform highlights</p>
+                    <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">Everything a modern services firm needs.</h2>
+                    <p className="mt-3 text-lg text-slate-300">
+                        Automations, shared inboxes, customer portals, and AI data extraction are ready to plug into your existing workstreams.
+                    </p>
+                    <div className="mt-12 grid gap-6 md:grid-cols-2">
+                        {platformHighlights.map((text) => (
+                            <div key={text} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-base text-slate-200 shadow-lg shadow-black/30">
+                                {text}
+                            </div>
+                        ))}
+                        {testimonialHighlights.map((text) => (
+                            <div key={text} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-base text-slate-200 shadow-lg shadow-black/30">
+                                {text}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
+}

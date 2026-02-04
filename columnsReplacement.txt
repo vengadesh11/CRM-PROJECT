@@ -1,0 +1,34 @@
+                <div className= relative mb-4>
+                    <MagnifyingGlassIcon className=absolute left-3 top-2.5 w-4 h-4 text-slate-400 />
+                    <input
+                        type=text
+                        value={columnsSearch}
+                        onChange={(e) => setColumnsSearch(e.target.value)}
+                        placeholder=Search columns...
+                        className=w-full rounded-2xl border border-slate-900 bg-slate-950 py-2 pl-10 pr-3 text-sm text-white placeholder-white/60 shadow-inner focus:border-primary-500 focus:outline-none
+                    />
+                </div>
+                <div className=max-h-72 space-y-2 overflow-y-auto pr-2>
+                    {filteredColumns.map((column) => (
+                        <div
+                            key={column.id}
+                            draggable
+                            onDragStart={() => handleColumnDragStart(column.id)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => handleColumnDrop(column.id)}
+                            onDragEnd={() => setDragColumnId(null)}
+                            className={lex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-medium transition-colors }
+                        >
+                            <div className=flex items-center gap-3>
+                                <span className=text-slate-400>=</span>
+                                <span className=text-slate-900>{column.label}</span>
+                            </div>
+                            <input
+                                type=checkbox
+                                className=h-4 w-4 rounded border-slate-400 text-primary-600 focus:ring-primary-500
+                                checked={visibleColumns[column.id]}
+                                onChange={() => toggleColumn(column.id)}
+                            />
+                        </div>
+                    ))}
+                </div>
