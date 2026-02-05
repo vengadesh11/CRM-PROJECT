@@ -62,3 +62,7 @@ export const testDispatch = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+export const handleStripeWebhook = async (req: Request, res: Response) => {
+    return WebhookService.handleStripeWebhook(req, res);
+};

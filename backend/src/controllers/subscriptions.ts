@@ -19,7 +19,7 @@ export const createSubscription = async (req: Request, res: Response): Promise<v
         };
 
         const { data, error } = await supabaseAdmin
-            .from('subscriptions')
+            .from('subscription_requests')
             .insert(payload)
             .select()
             .single();

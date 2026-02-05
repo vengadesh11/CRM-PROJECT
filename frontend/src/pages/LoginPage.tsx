@@ -28,7 +28,8 @@ export default function LoginPage() {
                 setError('Check your email to confirm your account!');
             } else {
                 await signIn(email, password);
-                navigate('/dashboard');
+                const redirect = searchParams.get('redirect');
+                navigate(redirect || '/dashboard');
             }
         } catch (err: any) {
             setError(err.message || 'Authentication failed');
@@ -45,6 +46,11 @@ export default function LoginPage() {
                     <p className="text-gray-400 font-medium">
                         {isSignUp ? 'Create your account' : 'Sign in to your account'}
                     </p>
+                    {searchParams.get('plan') && (
+                        <div className="mt-4 inline-block bg-primary-900/50 border border-primary-500/50 rounded-full px-4 py-1 text-sm text-primary-200">
+                            Continuing with <strong>{searchParams.get('plan')}</strong>
+                        </div>
+                    )}
                 </div>
 
                 {error && (

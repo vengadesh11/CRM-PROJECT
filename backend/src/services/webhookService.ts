@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import supabaseAdmin from '../config/supabase';
+import { stripe } from '../config/stripe';
+import { Request, Response } from 'express';
 
 interface WebhookPayload {
     event: string;
@@ -121,5 +123,85 @@ export class WebhookService {
             })
             .select()
             .single();
+    }
+
+    /**
+     * Handle incoming Stripe webhooks
+     */
+    static async handleStripeWebhook(req: Request, res: Response) {
+        const sig = req.headers['stripe-signature'];
+        const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+        let event;
+
+        try {
+            if (!sig || !endpointSecret) {
+                console.error('Missing signature or webhook secret');
+                return res.status(400).send('Missing signature or webhook secret');
+            }
+            event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
+        } catch (err: any) {
+            console.error(`Webhook Error: ${err.message}`);
+            return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+
+        // Handle the event
+        switch (event.type) {
+            case 'payment_intent.succeeded':
+                const paymentIntent = event.data.object;
+                console.log('PaymentIntent was successful!', paymentIntent.id);
+
+                // Lookup customer
+                let paymentCustomerId = null;
+                if (paymentIntent.customer) {
+                    const { data: customer } = await supabaseAdmin
+                        .from('customers')
+                        .select('id')
+                        .eq('stripe_customer_id', paymentIntent.customer)
+                        .single();
+                    if (customer) paymentCustomerId = customer.id;
+                }
+
+                // Update Payments Table
+                await supabaseAdmin.from('payments').upsert({
+                    stripe_payment_intent_id: paymentIntent.id,
+                    amount: paymentIntent.amount,
+                    currency: paymentIntent.currency,
+                    status: 'succeeded',
+                    customer_id: paymentCustomerId,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'stripe_payment_intent_id' });
+                break;
+
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated':
+                const subscription = event.data.object as any;
+
+                // Lookup customer
+                let subCustomerId = null;
+                if (subscription.customer) {
+                    const { data: customer } = await supabaseAdmin
+                        .from('customers')
+                        .select('id')
+                        .eq('stripe_customer_id', subscription.customer)
+                        .single();
+                    if (customer) subCustomerId = customer.id;
+                }
+
+                await supabaseAdmin.from('subscriptions').upsert({
+                    stripe_subscription_id: subscription.id,
+                    status: subscription.status,
+                    current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                    customer_id: subCustomerId,
+                    plan_name: subscription.items?.data[0]?.price?.nickname || 'Standard', // Fallback
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'stripe_subscription_id' });
+                break;
+            default:
+                console.log(`Unhandled event type ${event.type}`);
+        }
+
+        // Return a 200 response to acknowledge receipt of the event
+        return res.json({ received: true });
     }
 }

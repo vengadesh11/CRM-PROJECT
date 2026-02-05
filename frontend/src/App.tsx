@@ -10,6 +10,7 @@ import DepartmentsPage from './pages/DepartmentsPage';
 import RolesPage from './pages/RolesPage';
 import UsersPage from './pages/UsersPage';
 import LandingPage from './pages/LandingPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 
 // Protected Route Component
 function ProtectedRoute({ children, permission }: { children: React.ReactNode; permission?: string }) {
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/settings" element={<ProtectedRoute permission="settings.view"><CustomFieldsPage /></ProtectedRoute>} />
 
                     {/* Default Route */}
+                    <Route path="/subscription" element={<SubscriptionPage />} />
                     <Route path="/" element={<LandingPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

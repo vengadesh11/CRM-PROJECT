@@ -22,6 +22,7 @@ import analyticsRouter from './routes/analytics';
 import webhooksRouter from './routes/webhooks';
 import integrationsRouter from './routes/integrations';
 import apiKeysRouter from './routes/api-keys';
+import paymentsRouter from './routes/payments';
 
 // Force restart
 const app: Application = express();
@@ -73,6 +74,7 @@ app.use('/api/crm/analytics', analyticsRouter);
 app.use('/api/crm/webhooks', webhooksRouter);
 app.use('/api/crm/integrations', integrationsRouter);
 app.use('/api/crm/api-keys', apiKeysRouter);
+app.use('/api/crm/payments', paymentsRouter);
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: any) => {

@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useRef, useState, type FormEvent } from 'react';
-import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm';
 
@@ -58,65 +57,9 @@ const testimonialHighlights = [
     'Journeys for compliance, renewals, and onboarding'
 ];
 
-type TrialForm = {
-    plan: string;
-    contact_name: string;
-    company_name: string;
-    email: string;
-    phone: string;
-    message: string;
-};
 
 export default function LandingPage() {
-    const [formData, setFormData] = useState<TrialForm>({
-        plan: plans[1].name,
-        contact_name: '',
-        company_name: '',
-        email: '',
-        phone: '',
-        message: ''
-    });
-    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-    const [statusMessage, setStatusMessage] = useState('');
-    const formRef = useRef<HTMLDivElement | null>(null);
-
-    const handleTrialSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setStatus('loading');
-        setStatusMessage('');
-        try {
-            await axios.post(`${API_BASE}/subscriptions`, {
-                plan_name: formData.plan,
-                contact_name: formData.contact_name,
-                company_name: formData.company_name,
-                email: formData.email,
-                phone: formData.phone,
-                message: formData.message
-            });
-
-            await axios.post(`${API_BASE}/analytics/events`, {
-                event_name: 'trial_interest',
-                metadata: {
-                    plan: formData.plan,
-                    company_name: formData.company_name
-                }
-            });
-
-            setStatus('success');
-            setStatusMessage('Thanks! A member from our sales team will reach out within one business day.');
-            setFormData((prev) => ({
-                ...prev,
-                contact_name: '',
-                company_name: '',
-                email: '',
-                phone: '',
-                message: ''
-            }));
-        } catch (error: any) {
-            setStatus('error');
-            setStatusMessage(error?.response?.data?.error || error.message || 'Something went wrong. Please try again.');
-        }
-    };
+    // Trial logic removed
     const navigate = useNavigate();
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const [planNotice, setPlanNotice] = useState(false);
@@ -124,9 +67,7 @@ export default function LandingPage() {
 
     const handlePlanSelection = (planName: string) => {
         setSelectedPlan(planName);
-        setPlanNotice(false);
-        setFormData((prev) => ({ ...prev, plan: planName }));
-        formRef.current?.scrollIntoView({ behavior: 'smooth' });
+        navigate(`/subscription?plan=${encodeURIComponent(planName)}`);
     };
 
     const handleCreateAccountClick = () => {
@@ -151,19 +92,19 @@ export default function LandingPage() {
                             Manage leads, customers, documents, and teams from a unified, secure platform.
                         </p>
                         <div className="flex flex-wrap gap-3">
-                        <button
-                            type="button"
-                            onClick={handleCreateAccountClick}
-                            className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase text-slate-900 shadow-lg shadow-white/30 transition hover:bg-gray-100"
-                        >
-                            Create an account
-                        </button>
-                        <Link
-                            to="/login"
-                            className="inline-flex items-center justify-center rounded-full border border-white/60 px-6 py-3 text-sm font-semibold uppercase text-white transition hover:border-white hover:bg-white/10"
-                        >
-                            Log in
-                        </Link>
+                            <button
+                                type="button"
+                                onClick={handleCreateAccountClick}
+                                className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase text-slate-900 shadow-lg shadow-white/30 transition hover:bg-gray-100"
+                            >
+                                Create an account
+                            </button>
+                            <Link
+                                to="/login"
+                                className="inline-flex items-center justify-center rounded-full border border-white/60 px-6 py-3 text-sm font-semibold uppercase text-white transition hover:border-white hover:bg-white/10"
+                            >
+                                Log in
+                            </Link>
                         </div>
                     </div>
                     <div className="mt-10 flex-1 surface-panel-muted p-8 lg:mt-0">
@@ -212,11 +153,10 @@ export default function LandingPage() {
                                 <button
                                     type="button"
                                     onClick={() => handlePlanSelection(plan.name)}
-                                    className={`inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase transition ${
-                                        plan.highlighted
-                                            ? 'bg-white text-slate-900 hover:bg-slate-100'
-                                            : 'border border-white/60 text-white hover:border-white hover:bg-white/10'
-                                    }`}
+                                    className={`inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase transition ${plan.highlighted
+                                        ? 'bg-white text-slate-900 hover:bg-slate-100'
+                                        : 'border border-white/60 text-white hover:border-white hover:bg-white/10'
+                                        }`}
                                 >
                                     {selectedPlan === plan.name ? 'Selected' : 'Select plan'}
                                 </button>
@@ -231,97 +171,7 @@ export default function LandingPage() {
                 </div>
             )}
 
-            <section className="px-6 py-16 md:py-24">
-                <div ref={formRef} className="mx-auto max-w-5xl surface-panel p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
-                    <div className="md:flex md:items-center md:justify-between">
-                        <div>
-                            <p className="text-sm uppercase tracking-[0.4em] text-primary-300">Request a trial</p>
-                            <h2 className="mt-3 text-3xl font-bold text-white">Start your team onboarding in minutes.</h2>
-                            <p className="mt-2 text-sm text-slate-200">Tell us about your preferred plan and we’ll guide you through onboarding, migrations, and integrations.</p>
-                        </div>
-                        <div className="mt-6 text-sm text-white/70 md:mt-0">
-                            Tracking conversion improves our service quality. You can opt-out anytime.
-                        </div>
-                    </div>
-                    <form onSubmit={handleTrialSubmit} className="mt-8 grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Plan</label>
-                            <select
-                                value={formData.plan}
-                                onChange={(event) => setFormData((prev) => ({ ...prev, plan: event.target.value }))}
-                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                            >
-                                {plans.map((plan) => (
-                                    <option key={plan.name} value={plan.name}>
-                                        {plan.name} — ${plan.price}/{plan.period}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Email</label>
-                            <input
-                                type="email"
-                                value={formData.email}
-                                required
-                                onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
-                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Company</label>
-                            <input
-                                type="text"
-                                value={formData.company_name}
-                                onChange={(event) => setFormData((prev) => ({ ...prev, company_name: event.target.value }))}
-                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Contact name</label>
-                            <input
-                                type="text"
-                                value={formData.contact_name}
-                                onChange={(event) => setFormData((prev) => ({ ...prev, contact_name: event.target.value }))}
-                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">Phone</label>
-                            <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))}
-                                className="w-full rounded-xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                            />
-                        </div>
-                        <div className="md:col-span-2 space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.4em] text-white/70">What are you trying to achieve?</label>
-                            <textarea
-                                value={formData.message}
-                                onChange={(event) => setFormData((prev) => ({ ...prev, message: event.target.value }))}
-                                className="w-full rounded-2xl border border-white/20 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-primary-400"
-                                rows={3}
-                                placeholder="Share your goals, a timeline, or migration questions."
-                            />
-                        </div>
-                        <div className="md:col-span-2 mt-1 flex flex-col gap-3">
-                            <button
-                                type="submit"
-                                disabled={status === 'loading'}
-                                className="inline-flex justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase text-slate-900 transition hover:bg-slate-100 disabled:opacity-50"
-                            >
-                                {status === 'loading' ? 'Sending...' : 'Request trial'}
-                            </button>
-                            {statusMessage && (
-                                <p className={`text-sm ${status === 'error' ? 'text-red-400' : 'text-green-300'}`}>
-                                    {statusMessage}
-                                </p>
-                            )}
-                        </div>
-                    </form>
-                </div>
-            </section>
+            {/* Request a trial section removed */}
 
             <section className="px-6 py-20 md:py-28">
                 <div className="mx-auto max-w-4xl text-center">

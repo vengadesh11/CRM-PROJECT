@@ -19,4 +19,10 @@ router.delete('/endpoints/:id', requirePermission('webhooks.delete'), webhookCon
 // POST /api/crm/webhooks/test
 router.post('/test', requirePermission('webhooks.create'), webhookController.testDispatch);
 
+// POST /api/crm/webhooks/stripe (Stripe sends events here)
+// Note: This needs raw body for signature verification if not handled by global middleware.
+// Assuming global middleware handles JSON, stripe.webhooks.constructEvent works with the raw buffer usually.
+// For now, we rely on req.body if the parser preserves it conformantly, or we might need `express.raw`.
+router.post('/stripe', webhookController.handleStripeWebhook);
+
 export default router;
