@@ -103,6 +103,28 @@ export const PERMISSION_RESOURCES: PermissionResourceConfig[] = [
             { action: 'view', label: 'View Settings' },
             { action: 'edit', label: 'Edit Settings' }
         ]
+    },
+    {
+        id: 'integrations',
+        label: 'Integrations',
+        section: 'Administration',
+        description: 'Manage third-party integrations',
+        actions: [
+            { action: 'view', label: 'View Integrations' },
+            { action: 'edit', label: 'Manage Integrations' }
+        ]
+    },
+    {
+        id: 'webhooks',
+        label: 'Webhooks',
+        section: 'Administration',
+        description: 'Manage webhook endpoints and logs',
+        actions: [
+            { action: 'view', label: 'View Webhooks' },
+            { action: 'create', label: 'Create Webhook' },
+            { action: 'edit', label: 'Edit Webhook' },
+            { action: 'delete', label: 'Delete Webhook' }
+        ]
     }
 ];
 

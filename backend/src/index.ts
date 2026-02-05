@@ -19,6 +19,8 @@ import permissionsRouter from './routes/permissions';
 import usersRouter from './routes/users';
 import subscriptionsRouter from './routes/subscriptions';
 import analyticsRouter from './routes/analytics';
+import webhooksRouter from './routes/webhooks';
+import integrationsRouter from './routes/integrations';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -66,6 +68,8 @@ app.use('/api/crm/customers', customersRouter);
 app.use('/api/crm/custom-fields', customFieldsRouter);
 app.use('/api/crm/subscriptions', subscriptionsRouter);
 app.use('/api/crm/analytics', analyticsRouter);
+app.use('/api/crm/webhooks', webhooksRouter);
+app.use('/api/crm/integrations', integrationsRouter);
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: any) => {

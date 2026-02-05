@@ -6,12 +6,18 @@ import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
 import TextArea from '../components/ui/TextArea';
 import { useAuth } from '../contexts/AuthContext';
+import WebhooksTab from '../components/settings/WebhooksTab';
+import IntegrationsTab from '../components/settings/IntegrationsTab';
+import ApiEndpointsTab from '../components/settings/ApiEndpointsTab';
 import {
     AdjustmentsHorizontalIcon,
     Cog6ToothIcon,
     PlusIcon,
     PencilSquareIcon,
-    TrashIcon
+    TrashIcon,
+    GlobeAltIcon,
+    PuzzlePieceIcon,
+    CodeBracketIcon
 } from '@heroicons/react/24/outline';
 
 type ModuleKey = 'leads' | 'deals' | 'customers';
@@ -37,7 +43,7 @@ interface CustomField {
 
 export default function CustomFieldsPage() {
     const { getAccessToken, hasPermission } = useAuth();
-    const [activeTab, setActiveTab] = useState<'sales' | 'custom'>('custom');
+    const [activeTab, setActiveTab] = useState<'sales' | 'custom' | 'integrations' | 'webhooks' | 'developer'>('custom');
     const [activeModule, setActiveModule] = useState<ModuleKey>('leads');
     const [fields, setFields] = useState<CustomField[]>([]);
     const [loadingFields, setLoadingFields] = useState(false);
@@ -60,6 +66,8 @@ export default function CustomFieldsPage() {
     );
 
     const canEditSettings = hasPermission('settings.edit');
+    const canViewWebhooks = hasPermission('webhooks.view');
+    const canViewIntegrations = hasPermission('integrations.view');
 
     const loadFields = async (module: ModuleKey) => {
         try {
@@ -78,8 +86,10 @@ export default function CustomFieldsPage() {
     };
 
     useEffect(() => {
-        loadFields(activeModule);
-    }, [activeModule, API_BASE, getAccessToken]);
+        if (activeTab === 'custom') {
+            loadFields(activeModule);
+        }
+    }, [activeModule, API_BASE, getAccessToken, activeTab]);
 
     const loadSalesFields = async () => {
         try {
@@ -100,36 +110,43 @@ export default function CustomFieldsPage() {
                 deals: dealsRes.data.data || []
             }));
         } catch (error) {
-            console.error('Failed to load sales fields:', error);
+            console.error('Failed to load sales fields', error);
         }
     };
 
     useEffect(() => {
-        loadSalesFields();
-    }, [API_BASE, getAccessToken]);
+        if (activeTab === 'sales') {
+            loadSalesFields();
+        }
+    }, [activeTab, API_BASE, getAccessToken]);
 
     const resetForm = () => {
-        setFieldType('text');
+        setEditingFieldId(null);
         setLabel('');
+        setFieldType('text');
         setPlaceholder('');
         setOptions('');
         setRequired(false);
-        setEditingFieldId(null);
     };
 
     const handleSave = async () => {
-        if (!label.trim()) return;
+        if (!label) {
+            alert('Label is required');
+            return;
+        }
+
         try {
             const token = await getAccessToken();
             const payload = {
                 module: activeModule,
-                label: label.trim(),
+                label,
                 field_type: fieldType,
                 required,
-                placeholder: placeholder.trim() || null,
+                placeholder,
                 options: ['dropdown', 'radio'].includes(fieldType)
                     ? options.split(',').map((opt) => opt.trim()).filter(Boolean)
-                    : null
+                    : null,
+                field_order: fields.length
             };
 
             if (editingFieldId) {
@@ -144,146 +161,65 @@ export default function CustomFieldsPage() {
 
             resetForm();
             loadFields(activeModule);
-            loadSalesFields();
         } catch (error) {
-            console.error('Failed to save custom field:', error);
+            console.error('Failed to save field:', error);
+            alert('Failed to save field');
         }
     };
 
     const handleEdit = (field: CustomField) => {
         setEditingFieldId(field.id);
-        setFieldType(field.field_type);
         setLabel(field.label);
+        setFieldType(field.field_type);
         setPlaceholder(field.placeholder || '');
         setOptions(field.options?.join(', ') || '');
         setRequired(field.required);
-
-        // Scroll to form
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this custom field? This may affect existing data.')) return;
+        if (!confirm('Are you sure you want to delete this field? Data stored in this field will be lost.')) return;
         try {
             const token = await getAccessToken();
             await axios.delete(`${API_BASE}/custom-fields/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             loadFields(activeModule);
-            loadSalesFields();
         } catch (error) {
-            console.error('Failed to delete custom field:', error);
+            console.error('Failed to delete field:', error);
+            alert('Failed to delete field');
         }
     };
 
-    const renderPreview = () => {
-        if (fieldType === 'textarea') {
-            return (
-                <TextArea
-                    placeholder={placeholder || 'Placeholder text...'}
-                    rows={3}
-                    value=""
-                    onChange={() => null}
-                />
-            );
-        }
-
-        if (fieldType === 'dropdown') {
-            return (
-                <Select
-                    label={label || 'Field Label'}
-                    options={(options ? options.split(',') : ['Option 1', 'Option 2']).map((opt) => ({
-                        value: opt.trim(),
-                        label: opt.trim()
-                    }))}
-                    value=""
-                    onChange={() => null}
-                />
-            );
-        }
-
-        if (fieldType === 'radio') {
-            return (
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-[var(--text-secondary)]">{label || 'Field Label'}</label>
-                    <div className="flex flex-wrap gap-3">
-                        {(options ? options.split(',') : ['Option 1', 'Option 2']).map((opt) => (
-                            <label key={opt} className="flex items-center gap-2 text-sm text-white">
-                                <input type="radio" name="preview" className="text-primary-600 focus:ring-primary-500" />
-                                {opt.trim()}
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        if (fieldType === 'checkbox') {
-            return (
-                <label className="flex items-center gap-2 text-sm text-white">
-                    <input type="checkbox" className="rounded border-gray-300 bg-white text-primary-600 focus:ring-primary-500" />
-                    {label || 'Field Label'}
-                </label>
-            );
-        }
-
-        if (fieldType === 'image') {
-            return (
-                <div className="border border-dashed border-[var(--surface-border)] rounded-xl bg-[var(--surface-input)] p-4 text-sm text-[var(--text-secondary)] text-center">
-                    Upload image
-                </div>
-            );
-        }
-
-        return (
-            <Input
-                label={label || 'Field Label'}
-                type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'}
-                placeholder={placeholder || 'Placeholder text...'}
-                value=""
-                onChange={() => null}
-            />
-        );
-    };
-
-    const moduleTabs: { key: ModuleKey; label: string }[] = [
-        { key: 'leads', label: 'Leads' },
-        { key: 'deals', label: 'Deals' },
-        { key: 'customers', label: 'Customers' }
+    const moduleTabs = [
+        { id: 'leads', label: 'Leads' },
+        { id: 'deals', label: 'Deals' },
+        { id: 'customers', label: 'Customers' }
     ];
 
     const fieldTypeOptions = [
-        { value: 'text', label: 'Input Text' },
-        { value: 'textarea', label: 'Text Area' },
+        { value: 'text', label: 'Text' },
+        { value: 'textarea', label: 'Message / Text Area' },
         { value: 'number', label: 'Number' },
         { value: 'date', label: 'Date' },
-        { value: 'dropdown', label: 'Dropdown' },
-        { value: 'radio', label: 'Radio Button' },
+        { value: 'dropdown', label: 'Dropdown List' },
+        { value: 'radio', label: 'Radio Buttons' },
         { value: 'checkbox', label: 'Checkbox' },
-        { value: 'image', label: 'Upload Image' }
+        { value: 'image', label: 'Image Upload' }
     ];
 
     return (
         <Layout title="Settings">
-            <div className="flex flex-col gap-8">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white mb-2">Settings</h2>
-                    <p className="text-muted">Configure and customize your Lead, Deal and Customers attributes</p>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
+                        <p className="text-gray-400 mt-1">Manage system configuration and custom fields.</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center justify-center">
-                    <div className="surface-panel p-1 inline-flex gap-1">
-                        <button
-                            onClick={() => setActiveTab('sales')}
-                            style={activeTab === 'sales' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'sales'
-                                ? 'shadow-md'
-                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
-                                }`}
-                        >
-                            <Cog6ToothIcon className="w-4 h-4" />
-                            Sales Settings
-                        </button>
+                <div className="flex flex-col gap-6">
+                    {/* Main Tabs */}
+                    <div className="flex items-center gap-4 border-b border-gray-800 pb-1 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('custom')}
                             style={activeTab === 'custom' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
@@ -292,174 +228,231 @@ export default function CustomFieldsPage() {
                                 : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
                                 }`}
                         >
-                            <AdjustmentsHorizontalIcon className="w-4 h-4" />
+                            <AdjustmentsHorizontalIcon className="w-5 h-5" />
                             Custom Fields
                         </button>
+                        <button
+                            onClick={() => setActiveTab('sales')}
+                            style={activeTab === 'sales' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'sales'
+                                ? 'shadow-md'
+                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <Cog6ToothIcon className="w-5 h-5" />
+                            Sales Settings
+                        </button>
+                        {canViewIntegrations && (
+                            <button
+                                onClick={() => setActiveTab('integrations')}
+                                style={activeTab === 'integrations' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                                className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'integrations'
+                                    ? 'shadow-md'
+                                    : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <GlobeAltIcon className="w-5 h-5" />
+                                Integrations
+                            </button>
+                        )}
+                        {canViewWebhooks && (
+                            <button
+                                onClick={() => setActiveTab('webhooks')}
+                                style={activeTab === 'webhooks' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                                className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'webhooks'
+                                    ? 'shadow-md'
+                                    : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <PuzzlePieceIcon className="w-5 h-5" />
+                                Webhooks
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setActiveTab('developer')}
+                            style={activeTab === 'developer' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'developer'
+                                ? 'shadow-md'
+                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <CodeBracketIcon className="w-5 h-5" />
+                            Developer
+                        </button>
                     </div>
-                </div>
 
-                {activeTab === 'sales' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {(['leads', 'deals'] as ModuleKey[]).map((module) => (
-                            <div key={module} className="surface-panel p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div className="text-xs font-bold uppercase tracking-wider text-blue-400">{module} module</div>
-                                        <h3 className="text-lg font-bold text-white capitalize">Sales {module}</h3>
-                                    </div>
+                    {/* CONTENT AREA */}
+                    {activeTab === 'custom' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Left: Field List */}
+                            <div className="lg:col-span-2 bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] shadow-sm overflow-hidden">
+                                <div className="p-4 border-b border-[var(--surface-border)] flex items-center gap-4 bg-[var(--surface-ground)]">
+                                    {moduleTabs.map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveModule(tab.id as ModuleKey)}
+                                            style={activeModule === tab.id ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                                            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeModule === tab.id
+                                                ? 'shadow-sm'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
                                 </div>
-                                {salesFields[module].length === 0 ? (
-                                    <div className="text-sm text-muted">No custom fields available yet.</div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {salesFields[module].map((field) => (
-                                            <div key={field.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 flex items-center justify-between">
-                                                <span>{field.label}</span>
-                                                <span className="text-xs font-bold uppercase text-muted">{field.field_type}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
 
-                {activeTab === 'custom' && (
-                    <>
-                        <div className="flex items-center justify-center">
-                            <div className="surface-panel p-1 inline-flex gap-1">
-                                {moduleTabs.map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setActiveModule(tab.key)}
-                                        style={activeModule === tab.key ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeModule === tab.key
-                                            ? 'shadow-md'
-                                            : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <span className="px-3 py-1 text-xs font-bold text-blue-300 bg-blue-500/20 rounded-lg uppercase tracking-wider">
-                                    {activeModule} module
-                                </span>
-                                <h3 className="text-lg font-bold text-white">Fields Configuration</h3>
-                            </div>
-                            {canEditSettings && <Button icon={PlusIcon} style={{ backgroundColor: '#2563eb', color: '#ffffff' }}>Create Field</Button>}
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="surface-panel p-6 space-y-4">
-                                <div className="text-white font-bold">
-                                    {editingFieldId ? 'Update Field Configuration' : 'New Field Configuration'}
+                                <div className="p-4">
+                                    {loadingFields ? (
+                                        <div className="text-gray-400 text-center py-8">Loading fields...</div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {fields.length === 0 && (
+                                                <div className="text-gray-400 text-center py-8 italic bg-black/20 rounded-lg">
+                                                    No custom fields found for {activeModule}. Create one!
+                                                </div>
+                                            )}
+                                            {fields.map((field) => (
+                                                <div key={field.id} className="group p-4 rounded-lg bg-[var(--surface-ground)] border border-[var(--surface-border)] hover:border-blue-500/30 transition-all flex items-center justify-between">
+                                                    <div>
+                                                        <h4 className="font-bold text-white flex items-center gap-2">
+                                                            {field.label}
+                                                            {field.required && <span className="text-xs text-red-400 bg-red-500/10 px-1.5 rounded">*</span>}
+                                                        </h4>
+                                                        <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider">{field.field_type}</p>
+                                                    </div>
+                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => handleEdit(field)}
+                                                            className="p-2 text-blue-400 hover:text-white hover:bg-blue-600 rounded-lg transition-colors"
+                                                            disabled={!canEditSettings}
+                                                        >
+                                                            <PencilSquareIcon className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(field.id)}
+                                                            className="p-2 text-red-400 hover:text-white hover:bg-red-600 rounded-lg transition-colors"
+                                                            disabled={!canEditSettings}
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <Select
-                                    label="Field Type"
-                                    options={fieldTypeOptions}
-                                    value={fieldType}
-                                    onChange={(e) => setFieldType(e.target.value as FieldType)}
-                                />
-                                <Input
-                                    label="Field Label"
-                                    placeholder="e.g. Referral Source"
-                                    value={label}
-                                    onChange={(e) => setLabel(e.target.value)}
-                                />
-                                {fieldType !== 'checkbox' && fieldType !== 'image' && (
+                            </div>
+
+                            {/* Right: Form */}
+                            <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] shadow-sm p-6 h-fit sticky top-6">
+                                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                    <PlusIcon className="w-5 h-5 text-blue-500" />
+                                    {editingFieldId ? 'Edit Field' : 'Create New Field'}
+                                </h3>
+
+                                <div className="space-y-4">
+                                    <Input
+                                        label="Label"
+                                        placeholder="e.g. Budget size"
+                                        value={label}
+                                        onChange={(e) => setLabel(e.target.value)}
+                                    />
+
+                                    <Select
+                                        label="Type"
+                                        value={fieldType}
+                                        onChange={(e) => setFieldType(e.target.value as FieldType)}
+                                        options={fieldTypeOptions}
+                                    />
+
+                                    {(fieldType === 'dropdown' || fieldType === 'radio') && (
+                                        <TextArea
+                                            label="Options (comma separated)"
+                                            placeholder="Small, Medium, Large"
+                                            value={options}
+                                            onChange={(e) => setOptions(e.target.value)}
+                                        />
+                                    )}
+
                                     <Input
                                         label="Placeholder"
-                                        placeholder="e.g. Enter source..."
+                                        placeholder="Helper text..."
                                         value={placeholder}
                                         onChange={(e) => setPlaceholder(e.target.value)}
                                     />
-                                )}
-                                {['dropdown', 'radio'].includes(fieldType) && (
-                                    <Input
-                                        label="Options"
-                                        placeholder="Option 1, Option 2, Option 3"
-                                        value={options}
-                                        onChange={(e) => setOptions(e.target.value)}
-                                    />
-                                )}
-                                <label className="flex items-center gap-2 text-sm text-white">
-                                    <input
-                                        type="checkbox"
-                                        checked={required}
-                                        onChange={(e) => setRequired(e.target.checked)}
-                                        className="rounded border-gray-300 bg-white text-primary-600 focus:ring-primary-500"
-                                    />
-                                    Required Field
-                                </label>
-                                <div className="flex gap-3">
-                                    <Button className="flex-1" onClick={handleSave} disabled={!canEditSettings} style={{ backgroundColor: '#2563eb', color: '#ffffff' }}>
-                                        {editingFieldId ? 'Update Field' : 'Save Field'}
-                                    </Button>
-                                    <Button variant="secondary" className="flex-1" onClick={resetForm} disabled={!canEditSettings}>
-                                        {editingFieldId ? 'Cancel' : 'Reset'}
-                                    </Button>
-                                </div>
-                            </div>
 
-                            <div className="surface-panel p-6">
-                                <div className="flex items-center gap-2 text-white font-bold mb-4">
-                                    <span className="text-green-400 text-xs">●</span>
-                                    Live Preview
+                                    <div className="flex items-center gap-2 pt-2">
+                                        <input
+                                            type="checkbox"
+                                            id="req"
+                                            checked={required}
+                                            onChange={(e) => setRequired(e.target.checked)}
+                                            className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="req" className="text-sm text-gray-300">Required Field</label>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-4">
+                                        {editingFieldId && (
+                                            <Button variant="secondary" onClick={resetForm} className="flex-1">Cancel</Button>
+                                        )}
+                                        {canEditSettings && <Button icon={PlusIcon} style={{ backgroundColor: '#2563eb', color: '#ffffff' }} className="flex-1" onClick={handleSave}>
+                                            {editingFieldId ? 'Update Field' : 'Save Field'}
+                                        </Button>}
+                                    </div>
                                 </div>
-                                <div className="border border-dashed border-white/10 rounded-2xl p-6 min-h-[240px] flex items-center justify-center bg-black/20">
-                                    <div className="w-full">{renderPreview()}</div>
-                                </div>
-                                <p className="text-xs text-muted text-center mt-4 italic">
-                                    This is how the field will appear in forms.
-                                </p>
                             </div>
                         </div>
+                    )}
 
-                        <div className="surface-panel p-6">
-                            <div className="text-white font-bold mb-4">Existing Fields</div>
-                            {loadingFields ? (
-                                <div className="text-sm text-muted">Loading fields...</div>
-                            ) : fields.length === 0 ? (
-                                <div className="text-sm text-muted">No custom fields created for {activeModule} yet.</div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {fields.map((field) => (
-                                        <div key={field.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 flex items-center justify-between group hover:border-blue-500/50 hover:bg-white/10 transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold">{field.label}</span>
-                                                <span className="text-[10px] px-2 py-0.5 font-bold uppercase bg-white/10 rounded text-muted">{field.field_type}</span>
-                                            </div>
-                                            {canEditSettings && (
-                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEdit(field)}
-                                                        className="p-1.5 text-muted hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <PencilSquareIcon className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(field.id)}
-                                                        className="p-1.5 text-muted hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <TrashIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
+                    {/* Sales Settings Tab Content */}
+                    {activeTab === 'sales' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {(['leads', 'deals'] as ModuleKey[]).map((module) => (
+                                <div key={module} className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div className="text-xs font-bold uppercase tracking-wider text-blue-400">{module} module</div>
+                                            <h3 className="text-lg font-bold text-white capitalize">Sales {module}</h3>
                                         </div>
-                                    ))}
+                                    </div>
+                                    {salesFields[module].length === 0 ? (
+                                        <div className="text-sm text-gray-400">No custom fields available yet.</div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {salesFields[module].map((field) => (
+                                                <div key={field.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 flex items-center justify-between">
+                                                    <span>{field.label}</span>
+                                                    <span className="text-xs font-bold uppercase text-gray-500 bg-white/5 px-2 py-0.5 rounded">{field.field_type}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            ))}
                         </div>
-                    </>
-                )}
+                    )}
+
+                    {/* Integrations Tab Content */}
+                    {activeTab === 'integrations' && canViewIntegrations && (
+                        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] p-6">
+                            <IntegrationsTab />
+                        </div>
+                    )}
+
+                    {/* Webhooks Tab Content */}
+                    {activeTab === 'webhooks' && canViewWebhooks && (
+                        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] p-6">
+                            <WebhooksTab />
+                        </div>
+                    )}
+
+                    {/* Developer Tab Content */}
+                    {activeTab === 'developer' && (
+                        <ApiEndpointsTab />
+                    )}
+                </div>
             </div>
         </Layout>
     );
