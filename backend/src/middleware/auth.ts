@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabaseAdmin } from '../config/supabase';
+import crypto from 'crypto';
 
 export interface AuthRequest extends Request {
     user?: {
@@ -12,7 +13,7 @@ export interface AuthRequest extends Request {
 }
 
 /**
- * Middleware to verify Supabase JWT token
+ * Middleware to verify Supabase JWT token OR API Key
  */
 export const authenticateToken = async (
     req: AuthRequest,
@@ -31,7 +32,53 @@ export const authenticateToken = async (
             return;
         }
 
-        // Verify the JWT token using Supabase
+        // ------------------------------------------------------------
+        // API KEY AUTHENTICATION
+        // ------------------------------------------------------------
+        if (token.startsWith('sk_live_')) {
+            const keyHash = crypto.createHash('sha256').update(token).digest('hex');
+
+            // Find key in DB
+            const { data: apiKeyData, error: apiKeyError } = await supabaseAdmin
+                .from('api_keys')
+                .select('user_id, is_active')
+                .eq('key_hash', keyHash)
+                .single();
+
+            if (apiKeyError || !apiKeyData || !apiKeyData.is_active) {
+                res.status(401).json({
+                    success: false,
+                    error: 'Invalid or inactive API Key'
+                });
+                return;
+            }
+
+            // Get user details associated with the key
+            const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(apiKeyData.user_id);
+
+            if (userError || !user) {
+                res.status(401).json({
+                    success: false,
+                    error: 'User associated with API Key not found'
+                });
+                return;
+            }
+
+            // Attach user info to request
+            req.user = {
+                id: user.id,
+                email: user.email,
+                role: user.user_metadata?.role || user.user_metadata?.role_name || 'User',
+                full_name: user.user_metadata?.full_name || ''
+            };
+
+            next();
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // JWT AUTHENTICATION (Standard)
+        // ------------------------------------------------------------
         const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
         if (error || !user) {

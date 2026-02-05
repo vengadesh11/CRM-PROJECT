@@ -25,6 +25,15 @@ export interface Integration {
     updated_at: string;
 }
 
+export interface ApiKey {
+    id: string;
+    name: string;
+    prefix: string; // e.g. "sk_live_..."
+    created_at: string;
+    last_used_at?: string;
+    apiKey?: string; // Only present upon creation
+}
+
 // --- Webhooks API ---
 
 export const getWebhookEndpoints = async (token: string) => {
@@ -77,4 +86,26 @@ export const getIntegrationLogs = async (token: string, id: string, limit = 50) 
         headers: { Authorization: `Bearer ${token}` }
     });
     return response.data.data;
+};
+
+// --- API Keys API ---
+
+export const getApiKeys = async (token: string) => {
+    const response = await axios.get(`${API_BASE}/api-keys`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as ApiKey[];
+};
+
+export const createApiKey = async (token: string, name: string) => {
+    const response = await axios.post(`${API_BASE}/api-keys`, { name }, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as ApiKey; // Contains full key
+};
+
+export const deleteApiKey = async (token: string, id: string) => {
+    await axios.delete(`${API_BASE}/api-keys/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
 };

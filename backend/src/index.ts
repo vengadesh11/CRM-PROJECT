@@ -21,7 +21,9 @@ import subscriptionsRouter from './routes/subscriptions';
 import analyticsRouter from './routes/analytics';
 import webhooksRouter from './routes/webhooks';
 import integrationsRouter from './routes/integrations';
+import apiKeysRouter from './routes/api-keys';
 
+// Force restart
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
@@ -70,6 +72,7 @@ app.use('/api/crm/subscriptions', subscriptionsRouter);
 app.use('/api/crm/analytics', analyticsRouter);
 app.use('/api/crm/webhooks', webhooksRouter);
 app.use('/api/crm/integrations', integrationsRouter);
+app.use('/api/crm/api-keys', apiKeysRouter);
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: any) => {
