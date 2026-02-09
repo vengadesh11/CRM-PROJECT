@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import supabaseAdmin from '../config/supabase';
+import { WebhookService } from '../services/webhookService';
 
 /**
  * GET /api/crm/leads
@@ -110,6 +111,18 @@ export const createLead = async (req: AuthRequest, res: Response): Promise<void>
             .single();
 
         if (error) throw error;
+
+        // Dispatch lead.created event to registered webhooks
+        try {
+            await WebhookService.dispatch('lead.created', {
+                event: 'lead.created',
+                timestamp: new Date().toISOString(),
+                data
+            });
+        } catch (webhookError) {
+            console.error('Failed to dispatch lead.created webhook:', webhookError);
+            // Don't fail the request if webhook dispatch fails
+        }
 
         res.status(201).json({
             success: true,

@@ -32,12 +32,14 @@ export class IntegrationService {
      * Update integration configuration
      */
     static async updateIntegration(id: string, updates: { is_active?: boolean; config?: any; triggers?: string[] }) {
-        return await supabaseAdmin
+        const { data, error } = await supabaseAdmin
             .from('integrations')
-            .update(updates)
+            .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
-            .single();
+            .maybeSingle();
+
+        return { data, error };
     }
 
     /**

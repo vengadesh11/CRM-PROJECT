@@ -126,6 +126,16 @@ export class WebhookService {
     }
 
     /**
+     * Delete a webhook endpoint
+     */
+    static async deleteEndpoint(id: string) {
+        return await supabaseAdmin
+            .from('webhook_endpoints')
+            .delete()
+            .eq('id', id);
+    }
+
+    /**
      * Handle incoming Stripe webhooks
      */
     static async handleStripeWebhook(req: Request, res: Response) {

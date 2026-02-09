@@ -40,6 +40,7 @@ export const updateIntegration = async (req: Request, res: Response) => {
 
         return res.json({ success: true, data });
     } catch (error: any) {
+        console.error('Failed to update integration:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };

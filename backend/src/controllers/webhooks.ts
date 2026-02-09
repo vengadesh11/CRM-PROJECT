@@ -36,14 +36,14 @@ export const createEndpoint = async (req: Request, res: Response) => {
 export const deleteEndpoint = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { supabaseAdmin } = require('../config/supabase'); // Or import at top if used frequently, sticking to existing style
 
-        const { error } = await supabaseAdmin.from('webhook_endpoints').delete().eq('id', id);
+        const { error } = await WebhookService.deleteEndpoint(id);
 
         if (error) throw error;
 
         return res.json({ success: true });
     } catch (error: any) {
+        console.error('Failed to delete webhook endpoint:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
