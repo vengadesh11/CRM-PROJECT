@@ -614,7 +614,8 @@ export default function DealsPage() {
 
                 {/* Table */}
                 <div
-                    className="surface-panel rounded-xl border border-[var(--surface-border)] overflow-hidden relative shadow-sm"
+                    className="surface-panel rounded-xl border border-[var(--surface-border)] overflow-x-auto relative shadow-sm"
+
                     onDragOver={(e) => {
                         e.preventDefault();
                         setIsDraggingFile(true);
@@ -653,15 +654,16 @@ export default function DealsPage() {
                                         </td>
                                     ))}
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="text-gray-400 hover:text-gray-900" title="View" onClick={() => openView(deal)}><EyeIcon className="w-4 h-4" /></button>
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button className="text-gray-400 hover:text-white" title="View" onClick={() => openView(deal)}><EyeIcon className="w-4 h-4" /></button>
                                             {canEditDeal && (
-                                                <button className="text-gray-400 hover:text-blue-600" title="Edit" onClick={() => openEdit(deal)}><PencilSquareIcon className="w-4 h-4" /></button>
+                                                <button className="text-gray-400 hover:text-blue-400" title="Edit" onClick={() => openEdit(deal)}><PencilSquareIcon className="w-4 h-4" /></button>
                                             )}
                                             {canDeleteDeal && (
-                                                <button className="text-gray-400 hover:text-red-600" title="Delete" onClick={() => handleDelete(deal.id)}><TrashIcon className="w-4 h-4" /></button>
+                                                <button className="text-gray-400 hover:text-red-400" title="Delete" onClick={() => handleDelete(deal.id)}><TrashIcon className="w-4 h-4" /></button>
                                             )}
                                         </div>
+
                                     </td>
                                 </tr>
                             ))}

@@ -109,3 +109,76 @@ export const deleteApiKey = async (token: string, id: string) => {
         headers: { Authorization: `Bearer ${token}` }
     });
 };
+
+export interface SuiteCrmStatus {
+    lastSyncAt: string | null;
+    latestLog: any | null;
+}
+
+export const syncSuiteCrm = async (token: string) => {
+    const response = await axios.post(`${API_BASE}/integrations/suitecrm/sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const getSuiteCrmStatus = async (token: string) => {
+    const response = await axios.get(`${API_BASE}/integrations/suitecrm/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as SuiteCrmStatus;
+};
+
+export interface ZohoStatus {
+    lastSyncAt: string | null;
+    latestLog: any | null;
+}
+
+export const syncZoho = async (token: string) => {
+    return await axios.post(`${API_BASE}/integrations/zoho/sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+};
+
+export const getZohoStatus = async (token: string) => {
+    const response = await axios.get(`${API_BASE}/integrations/zoho/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as ZohoStatus;
+};
+
+export interface EspoStatus {
+    lastSyncAt: string | null;
+    latestLog: any | null;
+}
+
+export const syncEspo = async (token: string) => {
+    return await axios.post(`${API_BASE}/integrations/espocrm/sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+};
+
+export const getEspoStatus = async (token: string) => {
+    const response = await axios.get(`${API_BASE}/integrations/espocrm/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as EspoStatus;
+};
+
+export interface OroStatus {
+    lastSyncAt: string | null;
+    latestLog: any | null;
+}
+
+export const syncOro = async (token: string) => {
+    return await axios.post(`${API_BASE}/integrations/orocrm/sync`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+};
+
+export const getOroStatus = async (token: string) => {
+    const response = await axios.get(`${API_BASE}/integrations/orocrm/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.data as OroStatus;
+};

@@ -277,7 +277,7 @@ export default function CustomFieldsPage() {
                                 }`}
                         >
                             <CodeBracketIcon className="w-5 h-5" />
-                            Developer
+                            Api Integrations
                         </button>
                     </div>
 

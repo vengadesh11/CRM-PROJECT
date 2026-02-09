@@ -597,7 +597,8 @@ export default function LeadsPage() {
 
                 {/* Table */}
                 <div
-                    className="surface-panel overflow-hidden relative"
+                    className="surface-panel overflow-x-auto relative"
+
                     onDragOver={(e) => {
                         e.preventDefault();
                         setIsDraggingFile(true);

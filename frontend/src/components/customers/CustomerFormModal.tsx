@@ -85,6 +85,8 @@ export default function CustomerFormModal({ isOpen, onClose, onSubmit, mode = 'c
     const [customFields, setCustomFields] = useState<CustomField[]>([]);
     const [customValues, setCustomValues] = useState<Record<string, any>>({});
     const [uploadingFieldIds, setUploadingFieldIds] = useState<Set<string>>(new Set());
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
 
     const API_BASE = useMemo(
         () => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm',
@@ -423,6 +425,7 @@ export default function CustomerFormModal({ isOpen, onClose, onSubmit, mode = 'c
                                         {isExtracting ? 'Analyzing...' : 'Auto-Fill with AI'}
                                         <input
                                             type="file"
+                                            ref={fileInputRef}
                                             className="hidden"
                                             accept=".pdf,.jpg,.jpeg,.png"
                                             onChange={(e) => e.target.files?.[0] && handleAIExtract(e.target.files[0])}
@@ -436,7 +439,9 @@ export default function CustomerFormModal({ isOpen, onClose, onSubmit, mode = 'c
                                         options={[{ value: 'Trade License', label: 'Trade License' }, { value: 'MOA', label: 'MOA' }, { value: 'VAT Certificate', label: 'VAT Certificate' }]}
                                         disabled={isReadOnly}
                                     />
-                                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-3 text-center text-sm text-gray-400 hover:border-primary-400 transition-all cursor-pointer bg-slate-900/30">
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="border-2 border-dashed border-slate-600 rounded-lg p-3 text-center text-sm text-gray-400 hover:border-primary-400 transition-all cursor-pointer bg-slate-900/30">
                                         Click to upload document
                                     </div>
                                 </div>

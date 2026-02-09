@@ -37,10 +37,10 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
             last_used_at: key.last_used_at
         }));
 
-        res.json({ success: true, data: sanitizedKeys });
+        return res.json({ success: true, data: sanitizedKeys });
     } catch (error: any) {
         console.error('Error fetching API keys:', error);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -79,7 +79,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
         if (error) throw error;
 
         // Return the FULL key only once
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             data: {
                 id: data.id,
@@ -91,7 +91,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
         });
     } catch (error: any) {
         console.error('Error creating API key:', error);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -114,10 +114,10 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
 
         if (error) throw error;
 
-        res.json({ success: true });
+        return res.json({ success: true });
     } catch (error: any) {
         console.error('Error revoking API key:', error);
-        res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 

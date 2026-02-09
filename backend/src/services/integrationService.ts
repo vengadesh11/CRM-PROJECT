@@ -18,6 +18,17 @@ export class IntegrationService {
     }
 
     /**
+     * Get integration by provider
+     */
+    static async getIntegrationByProvider(provider: string) {
+        return await supabaseAdmin
+            .from('integrations')
+            .select('*')
+            .eq('provider', provider)
+            .single();
+    }
+
+    /**
      * Update integration configuration
      */
     static async updateIntegration(id: string, updates: { is_active?: boolean; config?: any; triggers?: string[] }) {

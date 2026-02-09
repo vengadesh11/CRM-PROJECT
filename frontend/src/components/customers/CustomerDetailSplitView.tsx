@@ -53,8 +53,10 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
     ]);
 
     const [isDealModalOpen, setIsDealModalOpen] = useState(false);
+    const [dealModalMode, setDealModalMode] = useState<'create' | 'edit'>('create');
     const [dealInitialData, setDealInitialData] = useState<any>(null);
     const [customerDeals, setCustomerDeals] = useState<any[]>([]);
+
 
     // DnD Sensors
     const sensors = useSensors(
@@ -109,27 +111,28 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
             company_name: customer.company_name || customer.display_name,
             // Pre-fill other fields if necessary
         });
+        setDealModalMode('create');
         setIsDealModalOpen(true);
     };
 
+
     const handleDealSubmit = async (data: any) => {
-        // Here we would normally call the API to create the deal
-        // For now, we will just close the modal and maybe show a success message or refresh logic
-        // The DealFormModal props expects onSubmit to handle the API call usually, OR return data for parent to handle.
-        // Looking at DealFormModal: onSubmit(data) -> Parent handles it.
-
         try {
-            // We need to actually create the deal here if DealFormModal doesn't do it internally.
-            // But DealFormModal logic: onSubmit(data) -> Parent handles it.
-            // So we need to call API here.
-
-            // ... API call logic ...
-            console.log("Creating deal:", data);
-
             const token = await getAccessToken();
-            await axios.post(`http://localhost:3001/api/crm/deals`, data, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+
+            if (dealModalMode === 'edit' && dealInitialData?.id) {
+                // UPDATE existing deal
+                console.log("Updating deal:", dealInitialData.id, data);
+                await axios.put(`http://localhost:3001/api/crm/deals/${dealInitialData.id}`, data, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                // CREATE new deal
+                console.log("Creating deal:", data);
+                await axios.post(`http://localhost:3001/api/crm/deals`, data, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
 
             // Refresh deals
             const response = await axios.get(`http://localhost:3001/api/crm/deals`, {
@@ -142,18 +145,19 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
 
             setIsDealModalOpen(false);
         } catch (error) {
-            console.error("Error creating deal", error);
+            console.error("Error saving deal", error);
         }
     };
 
-    const [editingService, setEditingService] = useState<string | null>(null);
-    const [editServiceName, setEditServiceName] = useState('');
+
+
+
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
 
     // Initialize expanded state with all services open by default
     useEffect(() => {
         setExpandedServices(new Set(serviceCategories));
-    }, [serviceCategories]); // Re-initialize if categories change
+    }, [serviceCategories]);
 
     // Toggle Expand/Collapse
     const toggleExpand = (serviceName: string) => {
@@ -170,23 +174,31 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
 
     // Service Actions
     const handleEditService = (serviceName: string) => {
-        setEditingService(serviceName);
-        setEditServiceName(serviceName);
-    };
+        // Find the active (open) deal or the most recent deal for this service
+        const dealsForService = customerDeals.filter(d => d.name === serviceName);
+        const activeDeal = dealsForService.find(d => !d.service_closed) || dealsForService[0];
 
-    const handleSaveServiceRename = () => {
-        if (editingService && editServiceName && editServiceName !== editingService) {
-            setServiceCategories(items => items.map(item => item === editingService ? editServiceName : item));
+        if (activeDeal) {
+            setDealInitialData(activeDeal);
+            setDealModalMode('edit');
+        } else {
+            setDealInitialData({
+                name: serviceName,
+                cif: customer.cif,
+                company_name: customer.company_name || customer.display_name,
+            });
+            setDealModalMode('create');
         }
-        setEditingService(null);
-        setEditServiceName('');
+        setIsDealModalOpen(true);
     };
 
     const handleDeleteService = (serviceName: string) => {
+
         if (confirm(`Are you sure you want to delete "${serviceName}"?`)) {
             setServiceCategories(items => items.filter(item => item !== serviceName));
         }
     };
+
 
     if (!customer) {
         return (
@@ -455,32 +467,11 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
                 onClose={() => setIsDealModalOpen(false)}
                 onSubmit={handleDealSubmit}
                 initialData={dealInitialData}
-                mode="create"
+                mode={dealModalMode}
             />
 
-            {/* Service Edit Modal */}
-            <Modal
-                isOpen={!!editingService}
-                onClose={() => setEditingService(null)}
-                title="Edit Service"
-                maxWidth="sm"
-            >
-                <div className="space-y-4">
-                    <Input
-                        label="Service Name"
-                        value={editServiceName}
-                        onChange={(e) => setEditServiceName(e.target.value)}
-                    />
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="secondary" onClick={() => setEditingService(null)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSaveServiceRename}>
-                            Save Changes
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+
+
         </div>
     );
 }

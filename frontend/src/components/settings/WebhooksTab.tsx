@@ -17,6 +17,13 @@ export default function WebhooksTab() {
     const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
     const [loading, setLoading] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const requireToken = async () => {
+        const token = await getAccessToken();
+        if (!token) {
+            throw new Error('Missing authentication token. Please sign in again.');
+        }
+        return token;
+    };
 
     // Form State
     const [url, setUrl] = useState('');
@@ -32,7 +39,7 @@ export default function WebhooksTab() {
     const loadEndpoints = async () => {
         setLoading(true);
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             const data = await getWebhookEndpoints(token);
             setEndpoints(data || []);
         } catch (error) {
@@ -44,7 +51,7 @@ export default function WebhooksTab() {
 
     const handleCreate = async () => {
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             await createWebhookEndpoint(token, {
                 url,
                 description,
@@ -63,7 +70,7 @@ export default function WebhooksTab() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this webhook?')) return;
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             await deleteWebhookEndpoint(token, id);
             loadEndpoints();
         } catch (error) {
@@ -73,7 +80,7 @@ export default function WebhooksTab() {
 
     const handleTest = async (event: string) => {
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             await testWebhookDispatch(token, event);
             alert(`Test event '${event}' dispatched! Check your endpoint logs.`);
         } catch (error) {

@@ -260,9 +260,9 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                                     onChange={(e) => handleCustomerChange(e.target.value)}
                                     disabled={isReadOnly}
                                 />
-                                <Input label="CIF No" value={formData.cifNo} readOnly className="bg-gray-100 text-gray-500" />
+                                <Input label="CIF No" value={formData.cifNo} readOnly className="!bg-white/5 !text-gray-400 !border-white/10" />
                                 <Input label="Deal Name" placeholder="e.g. Audit Service 2024" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={isReadOnly} />
-                                <Input label="Company Name" type="text" value={formData.companyName} readOnly className="bg-gray-50 text-gray-500" />
+                                <Input label="Company Name" type="text" value={formData.companyName} readOnly className="!bg-white/5 !text-gray-400 !border-white/10" />
                                 <Input
                                     label="Email"
                                     type="email"
@@ -277,7 +277,7 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                                     value={formData.contactNo}
                                     onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
                                     disabled={isReadOnly}
-                                    className="bg-white"
+                                    className={isReadOnly ? "!bg-white/5 !text-gray-400 !border-white/10" : ""}
                                 />
                             </div>
                         </div>

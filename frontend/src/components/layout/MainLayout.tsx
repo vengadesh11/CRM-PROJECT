@@ -20,7 +20,7 @@ export default function Layout({ children, title }: LayoutProps) {
 
             {/* Main Content Area */}
             <div
-                className={`flex-1 flex flex-col min-h-screen transition-[margin] duration-200 ml-0 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-0'}`}
+                className={`flex-1 flex flex-col min-h-screen min-w-0 transition-[margin] duration-200 ml-0 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-0'}`}
             >
                 <Header
                     title={title}
@@ -28,10 +28,11 @@ export default function Layout({ children, title }: LayoutProps) {
                     onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 />
 
-                <main className="flex-1 p-6 overflow-y-auto bg-[#0a0e1a] text-white">
+                <main className="flex-1 p-6 overflow-y-auto bg-[#0a0e1a] text-white min-w-0">
                     {children}
                 </main>
             </div>
+
         </div>
     );
 }

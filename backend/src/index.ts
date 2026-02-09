@@ -20,19 +20,39 @@ import usersRouter from './routes/users';
 import subscriptionsRouter from './routes/subscriptions';
 import analyticsRouter from './routes/analytics';
 import webhooksRouter from './routes/webhooks';
-import integrationsRouter from './routes/integrations';
 import apiKeysRouter from './routes/api-keys';
 import paymentsRouter from './routes/payments';
+import suiteCrmRouter from './routes/suitecrm';
+// import zohoRouter from './routes/zoho';
+
+import espocrmRouter from './routes/espocrm';
+import orocrmRouter from './routes/orocrm';
+import integrationsRouter from './routes/integrations';
+
 
 // Force restart
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
+// Mount debug router at root level before other routes to catch the specific path
+// app.use(crmIntegrationsRouter); // Disabling external router
+
+
+
+
+
+
 // ============================================
 // MIDDLEWARE
 // ============================================
 
+app.use((req, _res, next) => {
+    console.log(`[DEBUG] Received ${req.method} ${req.url}`);
+    next();
+});
+
 app.use(helmet());
+
 const corsOptions = {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
     credentials: true,
@@ -60,6 +80,8 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.use('/api/crm/auth', authRouter);
+
+
 app.use('/api/crm/uploads', uploadsRouter);
 app.use('/api/crm/departments', departmentsRouter);
 app.use('/api/crm/roles', rolesRouter);
@@ -72,9 +94,29 @@ app.use('/api/crm/custom-fields', customFieldsRouter);
 app.use('/api/crm/subscriptions', subscriptionsRouter);
 app.use('/api/crm/analytics', analyticsRouter);
 app.use('/api/crm/webhooks', webhooksRouter);
-app.use('/api/crm/integrations', integrationsRouter);
 app.use('/api/crm/api-keys', apiKeysRouter);
 app.use('/api/crm/payments', paymentsRouter);
+app.use('/api/crm/integrations/suitecrm', suiteCrmRouter);
+// app.use('/api/crm/integrations/zoho', zohoRouter);
+
+
+
+
+
+
+app.use('/api/crm/integrations/espocrm', espocrmRouter);
+app.use('/api/crm/integrations/orocrm', orocrmRouter);
+app.use('/api/crm/integrations', integrationsRouter);
+
+
+
+// 404 Handler
+app.use((_req: Request, res: Response) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found'
+    });
+});
 
 // Global error handler
 app.use((err: Error, _req: Request, res: Response, _next: any) => {

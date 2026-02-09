@@ -44,10 +44,18 @@ export default function ApiEndpointsTab() {
     const [newKeyName, setNewKeyName] = useState('');
     const [createdKey, setCreatedKey] = useState<string | null>(null);
 
+    const requireToken = async () => {
+        const token = await getAccessToken();
+        if (!token) {
+            throw new Error('Missing authentication token. Please sign in again.');
+        }
+        return token;
+    };
+
     const loadKeys = async () => {
         try {
             setLoadingKeys(true);
-            const token = await getAccessToken();
+            const token = await requireToken();
             const keys = await getApiKeys(token);
             setApiKeys(keys);
         } catch (error) {
@@ -70,7 +78,7 @@ export default function ApiEndpointsTab() {
     const handleCreateKey = async () => {
         if (!newKeyName) return;
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             const newKey = await createApiKey(token, newKeyName);
             setCreatedKey(newKey.apiKey || null);
             setNewKeyName('');
@@ -84,7 +92,7 @@ export default function ApiEndpointsTab() {
     const handleDeleteKey = async (id: string) => {
         if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) return;
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             await deleteApiKey(token, id);
             loadKeys();
         } catch (error) {

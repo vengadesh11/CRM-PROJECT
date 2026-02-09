@@ -3,7 +3,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
     getIntegrations,
     updateIntegration,
-    Integration
+    Integration,
+    syncSuiteCrm,
+    getSuiteCrmStatus,
+    syncZoho,
+    getZohoStatus,
+    syncEspo,
+    getEspoStatus,
+    syncOro,
+    getOroStatus,
+    SuiteCrmStatus,
+    ZohoStatus,
+    EspoStatus,
+    OroStatus
 } from '../../lib/api-settings';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -26,15 +38,179 @@ export default function IntegrationsTab() {
     const [apiKey, setApiKey] = useState('');
 
     const canManage = hasPermission('integrations.edit');
+    const requireToken = async () => {
+        const token = await getAccessToken();
+        if (!token) {
+            throw new Error('Missing authentication token. Please sign in again.');
+        }
+        return token;
+    };
+
+    const [suiteStatus, setSuiteStatus] = useState<SuiteCrmStatus | null>(null);
+    const [suiteSyncing, setSuiteSyncing] = useState(false);
+    const [suiteLoading, setSuiteLoading] = useState(false);
+    const [suiteError, setSuiteError] = useState<string | null>(null);
+    const [zohoStatus, setZohoStatus] = useState<ZohoStatus | null>(null);
+    const [zohoSyncing, setZohoSyncing] = useState(false);
+    const [zohoLoading, setZohoLoading] = useState(false);
+    const [zohoError, setZohoError] = useState<string | null>(null);
+    const [espStatus, setEspStatus] = useState<EspoStatus | null>(null);
+    const [espSyncing, setEspSyncing] = useState(false);
+    const [espLoading, setEspLoading] = useState(false);
+    const [espError, setEspError] = useState<string | null>(null);
+    const [oroStatus, setOroStatus] = useState<OroStatus | null>(null);
+    const [oroSyncing, setOroSyncing] = useState(false);
+    const [oroLoading, setOroLoading] = useState(false);
+    const [oroError, setOroError] = useState<string | null>(null);
+
+    const loadSuiteStatus = async () => {
+        setSuiteLoading(true);
+        try {
+            const token = await requireToken();
+            const status = await getSuiteCrmStatus(token);
+            setSuiteStatus(status);
+            setSuiteError(null);
+        } catch (error: any) {
+            console.error('Failed to load SuiteCRM status', error);
+            setSuiteError(error?.message || 'Unable to load SuiteCRM status');
+        } finally {
+            setSuiteLoading(false);
+        }
+    };
+
+    const handleSuiteSync = async () => {
+        setSuiteSyncing(true);
+        try {
+            const token = await requireToken();
+            const response = await syncSuiteCrm(token);
+            setSuiteStatus((prev) => ({
+                lastSyncAt: response.data?.syncedAt || new Date().toISOString(),
+                latestLog: prev?.latestLog || null
+            }));
+            setSuiteError(null);
+            loadSuiteStatus();
+        } catch (error: any) {
+            console.error('Failed to sync SuiteCRM', error);
+            setSuiteError(error?.message || 'SuiteCRM sync failed');
+        } finally {
+            setSuiteSyncing(false);
+        }
+    };
+
+    const handleZohoSync = async () => {
+        setZohoSyncing(true);
+        try {
+            const token = await requireToken();
+            const response = await syncZoho(token);
+            setZohoStatus((prev) => ({
+                lastSyncAt: response.data?.syncedAt || new Date().toISOString(),
+                latestLog: prev?.latestLog || null
+            }));
+            setZohoError(null);
+            loadZohoStatus();
+        } catch (error: any) {
+            console.error('Failed to sync Zoho CRM', error);
+            setZohoError(error?.message || 'Zoho sync failed');
+        } finally {
+            setZohoSyncing(false);
+        }
+    };
+
+    const handleEspSync = async () => {
+        setEspSyncing(true);
+        try {
+            const token = await requireToken();
+            const response = await syncEspo(token);
+            setEspStatus((prev) => ({
+                lastSyncAt: response.data?.syncedAt || new Date().toISOString(),
+                latestLog: prev?.latestLog || null
+            }));
+            setEspError(null);
+            loadEspStatus();
+        } catch (error: any) {
+            console.error('Failed to sync EspoCRM', error);
+            setEspError(error?.message || 'EspoCRM sync failed');
+        } finally {
+            setEspSyncing(false);
+        }
+    };
+
+    const handleOroSync = async () => {
+        setOroSyncing(true);
+        try {
+            const token = await requireToken();
+            const response = await syncOro(token);
+            setOroStatus((prev) => ({
+                lastSyncAt: response.data?.syncedAt || new Date().toISOString(),
+                latestLog: prev?.latestLog || null
+            }));
+            setOroError(null);
+            loadOroStatus();
+        } catch (error: any) {
+            console.error('Failed to sync OroCRM', error);
+            setOroError(error?.message || 'OroCRM sync failed');
+        } finally {
+            setOroSyncing(false);
+        }
+    };
 
     useEffect(() => {
         loadIntegrations();
+        loadSuiteStatus();
+        loadZohoStatus();
+        loadEspStatus();
+        loadOroStatus();
     }, []);
+
+    const loadZohoStatus = async () => {
+        setZohoLoading(true);
+        try {
+            const token = await requireToken();
+            const status = await getZohoStatus(token);
+            setZohoStatus(status);
+            setZohoError(null);
+        } catch (error: any) {
+            console.error('Failed to load Zoho status', error);
+            setZohoError(error?.message || 'Unable to load Zoho status');
+        } finally {
+            setZohoLoading(false);
+        }
+    };
+
+    const loadEspStatus = async () => {
+        setEspLoading(true);
+        try {
+            const token = await requireToken();
+            const status = await getEspoStatus(token);
+            setEspStatus(status);
+            setEspError(null);
+        } catch (error: any) {
+            console.error('Failed to load EspoCRM status', error);
+            setEspError(error?.message || 'Unable to load EspoCRM status');
+        } finally {
+            setEspLoading(false);
+        }
+    };
+
+    const loadOroStatus = async () => {
+        setOroLoading(true);
+        try {
+            const token = await requireToken();
+            const status = await getOroStatus(token);
+            setOroStatus(status);
+            setOroError(null);
+        } catch (error: any) {
+            console.error('Failed to load OroCRM status', error);
+            setOroError(error?.message || 'Unable to load OroCRM status');
+        } finally {
+            setOroLoading(false);
+        }
+    };
 
     const loadIntegrations = async () => {
         setLoading(true);
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             const data = await getIntegrations(token);
             setIntegrations(data || []);
         } catch (error) {
@@ -47,7 +223,7 @@ export default function IntegrationsTab() {
     const handleToggle = async (integration: Integration) => {
         if (!canManage) return;
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             const updated = await updateIntegration(token, integration.id, { is_active: !integration.is_active });
             setIntegrations(prev => prev.map(i => i.id === updated.id ? updated : i));
         } catch (error) {
@@ -58,7 +234,7 @@ export default function IntegrationsTab() {
     const handleSaveConfig = async () => {
         if (!selectedIntegration) return;
         try {
-            const token = await getAccessToken();
+            const token = await requireToken();
             // Assuming the simple config just needs a generic 'api_key' secret for now
             const secrets = apiKey ? { api_token: apiKey } : undefined;
 
@@ -80,6 +256,149 @@ export default function IntegrationsTab() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="col-span-full p-6 rounded-xl border border-[var(--surface-border)] bg-gradient-to-r from-slate-900/60 to-blue-900/40 shadow-lg space-y-3">
+                <div className="flex items-start justify-between gap-6">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-blue-400">SuiteCRM Bridge</p>
+                        <h3 className="text-2xl font-bold text-white">Sync with SuiteCRM</h3>
+                        <p className="text-sm text-gray-400">
+                            Trigger a manual sync to pull records from your SuiteCRM instance and replay SuiteCRM webhooks into DocuFlow.
+                        </p>
+                    </div>
+                    <div className="text-right text-sm text-gray-400">
+                        <p>Last sync</p>
+                        <p className="text-base text-white">
+                            {suiteLoading
+                                ? 'Loading...'
+                                : suiteStatus?.lastSyncAt
+                                    ? new Date(suiteStatus.lastSyncAt).toLocaleString()
+                                    : 'Never synced'}
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                        <Button
+                            onClick={handleSuiteSync}
+                            disabled={!canManage || suiteSyncing}
+                            style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+                        >
+                            {suiteSyncing ? 'Syncing...' : 'Sync now'}
+                        </Button>
+                    </div>
+                </div>
+                {suiteError && (
+                    <p className="text-sm text-red-400">
+                        {suiteError}
+                    </p>
+                )}
+            </div>
+            <div className="col-span-full p-6 rounded-xl border border-[var(--surface-border)] bg-gradient-to-r from-emerald-900/60 to-green-900/40 shadow-lg space-y-3">
+                <div className="flex items-start justify-between gap-6">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-emerald-400">Zoho CRM</p>
+                        <h3 className="text-2xl font-bold text-white">Sync with Zoho</h3>
+                        <p className="text-sm text-gray-400">
+                            Pull leads from your Zoho CRM instance and forward any webhook events into DocuFlow.
+                        </p>
+                    </div>
+                    <div className="text-right text-sm text-gray-400">
+                        <p>Last sync</p>
+                        <p className="text-base text-white">
+                            {zohoLoading
+                                ? 'Loading...'
+                                : zohoStatus?.lastSyncAt
+                                    ? new Date(zohoStatus.lastSyncAt).toLocaleString()
+                                    : 'Never synced'}
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                        <Button
+                            onClick={handleZohoSync}
+                            disabled={!canManage || zohoSyncing}
+                            style={{ backgroundColor: '#059669', color: '#ffffff' }}
+                        >
+                            {zohoSyncing ? 'Syncing...' : 'Sync now'}
+                        </Button>
+                    </div>
+                </div>
+                {zohoError && (
+                    <p className="text-sm text-red-400">
+                        {zohoError}
+                    </p>
+                )}
+            </div>
+
+            <div className="col-span-full p-6 rounded-xl border border-[var(--surface-border)] bg-gradient-to-r from-amber-900/60 to-yellow-900/40 shadow-lg space-y-3">
+                <div className="flex items-start justify-between gap-6">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-yellow-400">EspoCRM</p>
+                        <h3 className="text-2xl font-bold text-white">Sync with EspoCRM</h3>
+                        <p className="text-sm text-gray-400">
+                            Pull lead records from EspoCRM and replay its webhook payloads into DocuFlow.
+                        </p>
+                    </div>
+                    <div className="text-right text-sm text-gray-400">
+                        <p>Last sync</p>
+                        <p className="text-base text-white">
+                            {espLoading
+                                ? 'Loading...'
+                                : espStatus?.lastSyncAt
+                                    ? new Date(espStatus.lastSyncAt).toLocaleString()
+                                    : 'Never synced'}
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                        <Button
+                            onClick={handleEspSync}
+                            disabled={!canManage || espSyncing}
+                            style={{ backgroundColor: '#b45309', color: '#ffffff' }}
+                        >
+                            {espSyncing ? 'Syncing...' : 'Sync EspoCRM'}
+                        </Button>
+                    </div>
+                </div>
+                {espError && (
+                    <p className="text-sm text-red-400">
+                        {espError}
+                    </p>
+                )}
+            </div>
+
+            <div className="col-span-full p-6 rounded-xl border border-[var(--surface-border)] bg-gradient-to-r from-purple-900/60 to-fuchsia-900/40 shadow-lg space-y-3">
+                <div className="flex items-start justify-between gap-6">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.4em] text-fuchsia-400">OroCRM</p>
+                        <h3 className="text-2xl font-bold text-white">Sync with OroCRM</h3>
+                        <p className="text-sm text-gray-400">
+                            Import OroCRM lead streams and forward webhook notifications to DocuFlow.
+                        </p>
+                    </div>
+                    <div className="text-right text-sm text-gray-400">
+                        <p>Last sync</p>
+                        <p className="text-base text-white">
+                            {oroLoading
+                                ? 'Loading...'
+                                : oroStatus?.lastSyncAt
+                                    ? new Date(oroStatus.lastSyncAt).toLocaleString()
+                                    : 'Never synced'}
+                        </p>
+                    </div>
+                    <div className="flex items-center justify-end">
+                        <Button
+                            onClick={handleOroSync}
+                            disabled={!canManage || oroSyncing}
+                            style={{ backgroundColor: '#9333ea', color: '#ffffff' }}
+                        >
+                            {oroSyncing ? 'Syncing...' : 'Sync OroCRM'}
+                        </Button>
+                    </div>
+                </div>
+                {oroError && (
+                    <p className="text-sm text-red-400">
+                        {oroError}
+                    </p>
+                )}
+            </div>
+
             {integrations.length === 0 && (
                 <div className="col-span-full p-8 text-center bg-white/5 rounded-lg text-gray-400">
                     No available integrations found. (Did you add them to the database?)
