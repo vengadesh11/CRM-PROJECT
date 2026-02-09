@@ -267,6 +267,44 @@ export default function CustomersPage() {
         loadCustomFields();
     }, [getAccessToken, API_BASE]);
 
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(new Set(customers.map(c => c.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} customers?`)) return;
+
+        try {
+            const token = await getAccessToken();
+            await axios.post(`${API_BASE}/customers/bulk-delete`, {
+                ids: Array.from(selectedIds)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSelectedIds(new Set());
+            fetchCustomers();
+        } catch (error) {
+            console.error('Failed to bulk delete customers:', error);
+            alert('Failed to delete customers');
+        }
+    };
+
     useEffect(() => {
         if (location.state?.convertFromLead) {
             const leadData = location.state.convertFromLead;
@@ -362,6 +400,11 @@ export default function CustomersPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
+                            {selectedIds.size > 0 && canDeleteCustomer && (
+                                <Button variant="danger" icon={TrashIcon} onClick={handleBulkDelete}>
+                                    Delete ({selectedIds.size})
+                                </Button>
+                            )}
                             <Button variant="secondary" className="px-3" onClick={() => setIsFilterModalOpen(true)} title="Advanced Filters">
                                 <FunnelIcon className="w-5 h-5" />
                             </Button>
@@ -382,7 +425,12 @@ export default function CustomersPage() {
                                 <thead>
                                     <tr className="border-b border-white/5 bg-white/5">
                                         <th className="px-6 py-4 w-12 text-left">
-                                            <input type="checkbox" className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0" />
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
+                                                checked={customers.length > 0 && selectedIds.size === customers.length}
+                                                onChange={handleSelectAll}
+                                            />
                                         </th>
                                         {orderedVisibleColumns.map(colId => (
                                             <th key={colId} className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider text-left whitespace-nowrap">
@@ -403,7 +451,12 @@ export default function CustomersPage() {
                                             }}
                                         >
                                             <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                                                <input type="checkbox" className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0" />
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
+                                                    checked={selectedIds.has(customer.id)}
+                                                    onChange={() => handleSelectOne(customer.id)}
+                                                />
                                             </td>
                                             {orderedVisibleColumns.map(colId => (
                                                 <td key={colId} className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap">

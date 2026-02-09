@@ -7,6 +7,8 @@ const router = Router();
 
 router.use(authenticateToken);
 
+router.post('/bulk-delete', requirePermission('deals.delete'), dealsController.bulkDeleteDeals);
+
 router.get('/', requirePermission('deals.view'), dealsController.getAllDeals);
 router.get('/:id', requirePermission('deals.view'), dealsController.getDealById);
 router.post('/', requirePermission('deals.create'), dealsController.createDeal);

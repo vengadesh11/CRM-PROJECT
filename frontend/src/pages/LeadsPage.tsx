@@ -127,6 +127,44 @@ export default function LeadsPage() {
         loadCustomFields();
     }, [getAccessToken]);
 
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(new Set(leads.map(l => l.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} leads?`)) return;
+
+        try {
+            const token = await getAccessToken();
+            await axios.post(`${API_BASE}/leads/bulk-delete`, {
+                ids: Array.from(selectedIds)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSelectedIds(new Set());
+            fetchLeads();
+        } catch (error) {
+            console.error('Failed to bulk delete leads:', error);
+            alert('Failed to delete leads');
+        }
+    };
+
     const handleCreateLead = async (data: any) => {
         try {
             const token = await getAccessToken();
@@ -557,6 +595,11 @@ export default function LeadsPage() {
                         <p className="text-sm text-muted mt-1">Total leads: {leads.length}</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        {selectedIds.size > 0 && canDeleteLead && (
+                            <Button variant="danger" icon={TrashIcon} onClick={handleBulkDelete}>
+                                Delete ({selectedIds.size})
+                            </Button>
+                        )}
                         {canCreateLead && (
                             <Button variant="secondary" icon={ArrowUpTrayIcon} onClick={() => fileInputRef.current?.click()}>Import</Button>
                         )}
@@ -615,7 +658,12 @@ export default function LeadsPage() {
                         <thead>
                             <tr className="border-b border-white/5 bg-slate-800/50">
                                 <th className="px-6 py-4 w-12 text-left">
-                                    <input type="checkbox" className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0" />
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
+                                        checked={leads.length > 0 && selectedIds.size === leads.length}
+                                        onChange={handleSelectAll}
+                                    />
                                 </th>
                                 {orderedVisibleColumns.map((columnId) => (
                                     <th key={columnId} className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider text-left">
@@ -629,7 +677,12 @@ export default function LeadsPage() {
                             {filteredLeads.map((lead, index) => (
                                 <tr key={lead.id} className="hover:bg-slate-800/30 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <input type="checkbox" className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0" />
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
+                                            checked={selectedIds.has(lead.id)}
+                                            onChange={() => handleSelectOne(lead.id)}
+                                        />
                                     </td>
                                     {orderedVisibleColumns.map((columnId) => (
                                         <td key={columnId} className="px-6 py-4 text-sm text-white">
@@ -652,18 +705,22 @@ export default function LeadsPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
 
-                    {/* Pagination */}
-                    <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.02]">
-                        <span className="text-sm text-[var(--text-secondary)]">Showing <span className="text-white font-medium">1</span> to <span className="text-white font-medium">{filteredLeads.length}</span> of <span className="text-white font-medium">{filteredLeads.length}</span> leads</span>
+                {/* Pagination */}
+                <div className="px-6 py-4 border-t border-white/5 flex items-center justify-center bg-slate-900/50 rounded-b-xl">
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-500">Showing <span className="text-white font-medium">1</span> to <span className="text-white font-medium">{filteredLeads.length}</span> of <span className="text-white font-medium">{filteredLeads.length}</span> leads</span>
+                        <div className="h-4 w-px bg-white/10 mx-2"></div>
                         <div className="flex items-center gap-2">
-                            <button className="p-1.5 rounded-lg hover:bg-dark-700 text-gray-400 disabled:opacity-50"><ChevronLeftIcon className="w-4 h-4" /></button>
-                            <button className="w-8 h-8 rounded-lg bg-primary-600 text-white text-sm font-medium">1</button>
-                            <button className="p-1.5 rounded-lg hover:bg-dark-700 text-gray-400 disabled:opacity-50"><ChevronRightIcon className="w-4 h-4" /></button>
+                            <button className="p-1.5 rounded-lg hover:bg-white/5 text-gray-400 disabled:opacity-50 transition-colors"><ChevronLeftIcon className="w-4 h-4" /></button>
+                            <button className="w-8 h-8 rounded-lg bg-primary-600 text-white text-sm font-bold shadow-lg shadow-primary-900/20">1</button>
+                            <button className="p-1.5 rounded-lg hover:bg-white/5 text-gray-400 disabled:opacity-50 transition-colors"><ChevronRightIcon className="w-4 h-4" /></button>
                         </div>
                     </div>
                 </div>
             </div>
+
 
             <Modal
                 isOpen={isFilterModalOpen}
@@ -762,8 +819,6 @@ export default function LeadsPage() {
                 onSubmit={handleSubmitLead}
                 mode={modalMode}
                 initialData={selectedLead}
-                onImport={() => fileInputRef.current?.click()}
-                onExport={exportLeadsToCsv}
             />
 
             {/* Convert to Customer Confirmation Modal */}

@@ -15,11 +15,9 @@ interface DealFormModalProps {
     onSubmit: (data: any) => void;
     mode?: 'create' | 'edit' | 'view';
     initialData?: any;
-    onImport?: () => void;
-    onExport?: () => void;
 }
 
-export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'create', initialData, onImport, onExport }: DealFormModalProps) {
+export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'create', initialData }: DealFormModalProps) {
     const { getAccessToken } = useAuth();
     const isReadOnly = mode === 'view';
     const [formData, setFormData] = useState({
@@ -40,6 +38,139 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const [uploadingFieldIds, setUploadingFieldIds] = useState<Set<string>>(new Set());
     const [customers, setCustomers] = useState<any[]>([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
+    const importInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleIndividualExport = () => {
+        // 1. Prepare data object with all fields flattened
+        const flatData: Record<string, any> = {
+            cifNo: formData.cifNo,
+            name: formData.name,
+            companyName: formData.companyName,
+            email: formData.email,
+            contactNo: formData.contactNo,
+            amount: formData.amount,
+            serviceClosed: formData.serviceClosed,
+            dealDate: formData.dealDate,
+            closingDate: formData.closingDate,
+            remarks: formData.remarks,
+            department: formData.department,
+        };
+
+        // Add custom fields with prefix to avoid collisions
+        Object.keys(customValues).forEach(key => {
+            flatData[`custom_${key}`] = customValues[key];
+        });
+
+        // 2. Generate CSV Content
+        const headers = Object.keys(flatData);
+        // Escape values for CSV (handle commas, quotes, newlines)
+        const csvRow = headers.map(header => {
+            const value = flatData[header] === null || flatData[header] === undefined ? '' : String(flatData[header]);
+            return `"${value.replace(/"/g, '""')}"`;
+        }).join(',');
+
+        const csvContent = `${headers.join(',')}\n${csvRow}`;
+
+        // 3. Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `deal_data_${new Date().getTime()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleIndividualImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const text = event.target?.result as string;
+                if (!text) return;
+
+                const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+                if (lines.length < 2) return;
+
+                const headers = lines[0].split(',').map(h => h.trim());
+
+                // Custom CSV Parser
+                const parseCSVRow = (row: string) => {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < row.length; i++) {
+                        const char = row[i];
+                        if (char === '"') {
+                            if (inQuotes && row[i + 1] === '"') {
+                                current += '"';
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current);
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current);
+                    return result;
+                };
+
+                const values = parseCSVRow(lines[1]);
+                const importedData: Record<string, any> = {};
+                headers.forEach((header, index) => {
+                    if (index < values.length) {
+                        importedData[header] = values[index];
+                    }
+                });
+
+                // Update State
+                setFormData(prev => ({
+                    ...prev,
+                    cifNo: importedData.cifNo || prev.cifNo,
+                    name: importedData.name || prev.name,
+                    companyName: importedData.companyName || prev.companyName,
+                    email: importedData.email || prev.email,
+                    contactNo: importedData.contactNo || prev.contactNo,
+                    amount: importedData.amount || prev.amount,
+                    serviceClosed: importedData.serviceClosed || prev.serviceClosed,
+                    dealDate: importedData.dealDate || prev.dealDate,
+                    closingDate: importedData.closingDate || prev.closingDate,
+                    remarks: importedData.remarks || prev.remarks,
+                    department: importedData.department || prev.department,
+                }));
+
+                // Attempt to match customer if CIF is imported
+                if (importedData.cifNo && customers.length > 0) {
+                    const matched = customers.find(c => c.cif === importedData.cifNo);
+                    if (matched) setSelectedCustomerId(matched.id);
+                }
+
+                // Extract custom fields
+                const newCustomValues: Record<string, any> = {};
+                Object.keys(importedData).forEach(key => {
+                    if (key.startsWith('custom_')) {
+                        const originalKey = key.replace('custom_', '');
+                        newCustomValues[originalKey] = importedData[key];
+                    }
+                });
+
+                setCustomValues(prev => ({ ...prev, ...newCustomValues }));
+
+                if (importInputRef.current) importInputRef.current.value = '';
+            } catch (error) {
+                console.error('Failed to parse imported deal CSV', error);
+            }
+        };
+        reader.readAsText(file);
+    };
 
     const API_BASE = useMemo(
         () => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm',
@@ -357,12 +488,19 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-8">
                     <div className="flex gap-2">
-                        <Button type="button" variant="secondary" size="sm" icon={ArrowUpTrayIcon} onClick={() => onImport?.()} className="text-primary-400 bg-primary-500/10 border-primary-500/30 hover:bg-primary-500/20">
+                        <Button type="button" variant="secondary" size="sm" icon={ArrowUpTrayIcon} onClick={() => importInputRef.current?.click()} className="text-primary-400 bg-primary-500/10 border-primary-500/30 hover:bg-primary-500/20">
                             Import
                         </Button>
-                        <Button type="button" variant="secondary" size="sm" icon={ArrowDownTrayIcon} onClick={() => onExport?.()} className="text-emerald-400 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20">
+                        <Button type="button" variant="secondary" size="sm" icon={ArrowDownTrayIcon} onClick={handleIndividualExport} className="text-emerald-400 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20">
                             Export
                         </Button>
+                        <input
+                            type="file"
+                            ref={importInputRef}
+                            className="hidden"
+                            accept=".csv"
+                            onChange={handleIndividualImport}
+                        />
                     </div>
                     <div className="flex gap-3">
                         <Button type="button" variant="secondary" onClick={onClose}>

@@ -8,6 +8,9 @@ const router = Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+// POST /api/crm/leads/bulk-delete - Bulk delete leads
+router.post('/bulk-delete', requirePermission('leads.delete'), leadsController.bulkDeleteLeads);
+
 // GET /api/crm/leads - Get all leads
 router.get('/', requirePermission('leads.view'), leadsController.getAllLeads);
 

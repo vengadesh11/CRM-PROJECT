@@ -130,6 +130,44 @@ export default function DealsPage() {
         loadCustomFields();
     }, [getAccessToken]);
 
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedIds(new Set(deals.map(d => d.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectOne = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} deals?`)) return;
+
+        try {
+            const token = await getAccessToken();
+            await axios.post(`${API_BASE}/deals/bulk-delete`, {
+                ids: Array.from(selectedIds)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSelectedIds(new Set());
+            fetchDeals();
+        } catch (error) {
+            console.error('Failed to bulk delete deals:', error);
+            alert('Failed to delete deals');
+        }
+    };
+
     const handleCreateDeal = async (data: any) => {
         try {
             const token = await getAccessToken();
@@ -574,6 +612,11 @@ export default function DealsPage() {
                         <p className="text-sm text-[var(--text-secondary)] mt-1">Manage and track your active business deals</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        {selectedIds.size > 0 && canDeleteDeal && (
+                            <Button variant="danger" icon={TrashIcon} onClick={handleBulkDelete}>
+                                Delete ({selectedIds.size})
+                            </Button>
+                        )}
                         {canCreateDeal && (
                             <Button variant="secondary" icon={ArrowUpTrayIcon} onClick={() => fileInputRef.current?.click()}>Import</Button>
                         )}
@@ -632,7 +675,12 @@ export default function DealsPage() {
                         <thead>
                             <tr className="border-b border-[var(--surface-border)] bg-[var(--surface-panel)]">
                                 <th className="px-6 py-4 w-12 text-left">
-                                    <input type="checkbox" className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white" />
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white"
+                                        checked={deals.length > 0 && selectedIds.size === deals.length}
+                                        onChange={handleSelectAll}
+                                    />
                                 </th>
                                 {orderedVisibleColumns.map((columnId) => (
                                     <th key={columnId} className="px-6 py-4 text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider text-left">
@@ -646,7 +694,12 @@ export default function DealsPage() {
                             {filteredDeals.map((deal, index) => (
                                 <tr key={deal.id} className="hover:bg-[var(--surface-elevated)] transition-colors group">
                                     <td className="px-6 py-4">
-                                        <input type="checkbox" className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white" />
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white"
+                                            checked={selectedIds.has(deal.id)}
+                                            onChange={() => handleSelectOne(deal.id)}
+                                        />
                                     </td>
                                     {orderedVisibleColumns.map((columnId) => (
                                         <td key={columnId} className="px-6 py-4 text-sm text-white">
@@ -774,8 +827,6 @@ export default function DealsPage() {
                 onSubmit={handleSubmitDeal}
                 mode={modalMode}
                 initialData={selectedDeal}
-                onImport={() => fileInputRef.current?.click()}
-                onExport={exportDealsToCsv}
             />
             <input
                 ref={fileInputRef}

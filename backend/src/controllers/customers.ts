@@ -219,6 +219,43 @@ export const updateCustomer = async (req: AuthRequest, res: Response): Promise<v
     }
 };
 
+/**
+ * POST /api/crm/customers/bulk-delete
+ * Bulk delete customers
+ */
+export const bulkDeleteCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({
+                success: false,
+                error: 'Invalid or empty IDs array'
+            });
+            return;
+        }
+
+        const { error, count } = await supabaseAdmin
+            .from('customers')
+            .delete({ count: 'exact' })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: `${count} customers deleted successfully`,
+            count
+        });
+    } catch (error: any) {
+        console.error('Failed to bulk delete customers:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to bulk delete customers'
+        });
+    }
+};
+
 export const deleteCustomer = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { id } = req.params;

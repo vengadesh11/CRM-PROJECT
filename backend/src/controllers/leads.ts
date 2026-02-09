@@ -183,6 +183,12 @@ export const updateLead = async (req: AuthRequest, res: Response): Promise<void>
  * DELETE /api/crm/leads/:id
  * Delete a lead
  */
+
+
+/**
+ * DELETE /api/crm/leads/:id
+ * Delete a lead
+ */
 export const deleteLead = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
@@ -203,6 +209,43 @@ export const deleteLead = async (req: AuthRequest, res: Response): Promise<void>
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to delete lead'
+        });
+    }
+};
+
+/**
+ * POST /api/crm/leads/bulk-delete
+ * Bulk delete leads
+ */
+export const bulkDeleteLeads = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({
+                success: false,
+                error: 'Invalid or empty IDs array'
+            });
+            return;
+        }
+
+        const { error, count } = await supabaseAdmin
+            .from('leads')
+            .delete({ count: 'exact' })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: `${count} leads deleted successfully`,
+            count
+        });
+    } catch (error: any) {
+        console.error('Failed to bulk delete leads:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to bulk delete leads'
         });
     }
 };

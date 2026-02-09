@@ -146,3 +146,40 @@ export const deleteDeal = async (req: AuthRequest, res: Response): Promise<void>
         res.status(500).json({ success: false, error: error.message || 'Failed to delete deal' });
     }
 };
+
+/**
+ * POST /api/crm/deals/bulk-delete
+ * Bulk delete deals
+ */
+export const bulkDeleteDeals = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            res.status(400).json({
+                success: false,
+                error: 'Invalid or empty IDs array'
+            });
+            return;
+        }
+
+        const { error, count } = await supabaseAdmin
+            .from('deals')
+            .delete({ count: 'exact' })
+            .in('id', ids);
+
+        if (error) throw error;
+
+        res.json({
+            success: true,
+            message: `${count} deals deleted successfully`,
+            count
+        });
+    } catch (error: any) {
+        console.error('Failed to bulk delete deals:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to bulk delete deals'
+        });
+    }
+};

@@ -25,6 +25,8 @@ router.post('/extract', upload.single('file'), async (req: AuthRequest, res) => 
     }
 });
 
+router.post('/bulk-delete', requirePermission('customers.delete'), customersController.bulkDeleteCustomers);
+
 router.get('/', requirePermission('customers.view'), customersController.getAllCustomers);
 router.get('/:id', requirePermission('customers.view'), customersController.getCustomerById);
 router.post('/', requirePermission('customers.create'), customersController.createCustomer);
