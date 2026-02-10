@@ -1,8 +1,37 @@
-
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Layout from '../components/layout/MainLayout';
+import { useAuth } from '../contexts/AuthContext';
+import { PLANS } from '../config/plans';
+import api from '../utils/api';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [subscription, setSubscription] = useState<any>(null);
+    const [loadingSub, setLoadingSub] = useState(true);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            if (!user?.email) return;
+            try {
+                const { data } = await api.get(`/payments/subscription-status?customer_email=${user.email}`);
+                if (data.success) {
+                    setSubscription(data.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch subscription status', err);
+            } finally {
+                setLoadingSub(false);
+            }
+        };
+        fetchStatus();
+    }, [user?.email]);
+
+    const handlePlanSelection = (planName: string) => {
+        navigate(`/subscription?plan=${encodeURIComponent(planName)}`);
+    };
+
     const modules = [
         {
             title: 'Leads Management',
@@ -41,7 +70,13 @@ export default function DashboardPage() {
                 <p className="text-[var(--text-secondary)]">Here's an overview of your CRM modules.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <SubscriptionSection
+                subscription={subscription}
+                loading={loadingSub}
+                onSelectPlan={handlePlanSelection}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {modules.map((module) => (
                     <Link
                         key={module.path}
@@ -65,3 +100,30 @@ export default function DashboardPage() {
         </Layout>
     );
 }
+
+const SubscriptionSection = ({ subscription, loading, onSelectPlan }: { subscription: any, loading: boolean, onSelectPlan: (name: string) => void }) => {
+    if (loading) return <div className="mb-8 p-6 surface-panel animate-pulse h-40"></div>;
+
+    if (subscription) {
+        return (
+            <div className="mb-8 p-6 rounded-2xl border border-white/10 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <p className="text-xs uppercase tracking-[0.4em] text-blue-400 mb-1">Active Subscription</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">{subscription.plan?.name}</h3>
+                    <p className="text-sm text-gray-400">
+                        Your subscription is <span className="text-emerald-400 font-bold uppercase">{subscription.status}</span>.
+                        Next renewal: <span className="text-white">{new Date(subscription.current_period_end * 1000).toLocaleDateString()}</span>
+                    </p>
+                </div>
+                <Link
+                    to="/settings"
+                    className="px-6 py-3 rounded-full bg-white text-slate-900 font-bold text-sm uppercase tracking-widest hover:bg-gray-200 transition-colors"
+                >
+                    Manage Billing
+                </Link>
+            </div>
+        );
+    }
+
+    return null;
+};

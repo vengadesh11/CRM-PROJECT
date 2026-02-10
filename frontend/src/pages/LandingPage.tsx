@@ -1,45 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useRef, useState } from 'react';
 
-const plans = [
-    {
-        name: 'Starter',
-        price: '0',
-        period: 'per user/month',
-        description: 'Get your team started with a free trial of the CRM experience.',
-        features: [
-            'Unlimited contacts',
-            'Lead & deal pipelines',
-            'Email & SMS activity log',
-            'Community support'
-        ]
-    },
-    {
-        name: 'Growth',
-        price: '49',
-        period: 'per user/month',
-        description: 'Automate processes and drive revenue with advanced insights.',
-        features: [
-            'Custom workflows',
-            'Priority support',
-            'Reports & dashboards',
-            'Portal access controls'
-        ],
-        highlighted: true
-    },
-    {
-        name: 'Enterprise',
-        price: '149',
-        period: 'per user/month',
-        description: 'Designed for large operations that need full governance.',
-        features: [
-            'Dedicated success manager',
-            'Advanced permissions',
-            'SLA-backed uptime',
-            'Custom integrations'
-        ]
-    }
-];
+import { PLANS as plans } from '../config/plans';
 
 const platformHighlights = [
     'Secure by design with audit trails, roles, and permissions',

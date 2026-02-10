@@ -84,7 +84,13 @@ export const createSubscription = async (req: Request, res: Response) => {
     try {
         const { priceId, customer_email, customer_name } = req.body;
 
-        const stripeCustomerId = await getOrCreateStripeCustomer(customer_email, customer_name);
+        // Use authenticated user's email if available, fallback to body (for flex, but auth is better)
+        const email = (req as any).user?.email || customer_email;
+        if (!email) {
+            return res.status(400).json({ success: false, error: 'User email is required' });
+        }
+
+        const stripeCustomerId = await getOrCreateStripeCustomer(email, customer_name);
 
         const subscription = await stripe.subscriptions.create({
             customer: stripeCustomerId,
@@ -94,18 +100,28 @@ export const createSubscription = async (req: Request, res: Response) => {
             expand: ['latest_invoice.payment_intent'],
         });
 
-        const invoice = subscription.latest_invoice as any; // Cast to any to avoid strict type issues with expansion
-        const paymentIntent = invoice.payment_intent as any;
+        const invoice = subscription.latest_invoice as any;
+        const paymentIntent = invoice?.payment_intent as any;
 
-        res.json({
+        return res.json({
             success: true,
             subscriptionId: subscription.id,
-            clientSecret: paymentIntent.client_secret,
+            clientSecret: paymentIntent?.client_secret || null,
         });
 
     } catch (error: any) {
         console.error('Create Subscription Error:', error);
-        res.status(500).json({ success: false, error: error.message });
+
+        // Handle Stripe specific errors with better messaging
+        if (error.type?.startsWith('Stripe')) {
+            return res.status(400).json({
+                success: false,
+                error: error.message,
+                code: error.code
+            });
+        }
+
+        return res.status(500).json({ success: false, error: 'Internal server error while creating subscription' });
     }
 };
 
@@ -124,5 +140,120 @@ export const createPortalSession = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Create Portal Session Error:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const listPaymentMethods = async (req: Request, res: Response) => {
+    try {
+        const { customer_email } = req.query;
+        if (!customer_email) throw new Error('Customer email is required');
+
+        const stripeCustomerId = await getOrCreateStripeCustomer(customer_email as string);
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: stripeCustomerId,
+            type: 'card',
+        });
+
+        // Get default payment method from customer
+        const customer = await stripe.customers.retrieve(stripeCustomerId) as any;
+        const defaultPaymentMethodId = customer.invoice_settings?.default_payment_method;
+
+        res.json({
+            success: true,
+            data: paymentMethods.data,
+            defaultPaymentMethodId
+        });
+    } catch (error: any) {
+        console.error('List Payment Methods Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const createSetupIntent = async (req: Request, res: Response) => {
+    try {
+        const { customer_email } = req.body;
+        const stripeCustomerId = await getOrCreateStripeCustomer(customer_email);
+
+        const setupIntent = await stripe.setupIntents.create({
+            customer: stripeCustomerId,
+            payment_method_types: ['card'],
+        });
+
+        res.json({
+            success: true,
+            clientSecret: setupIntent.client_secret
+        });
+    } catch (error: any) {
+        console.error('Create SetupIntent Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const setDefaultPaymentMethod = async (req: Request, res: Response) => {
+    try {
+        const { customer_email, paymentMethodId } = req.body;
+        const stripeCustomerId = await getOrCreateStripeCustomer(customer_email);
+
+        await stripe.customers.update(stripeCustomerId, {
+            invoice_settings: {
+                default_payment_method: paymentMethodId,
+            },
+        });
+
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Set Default Payment Method Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const detachPaymentMethod = async (req: Request, res: Response) => {
+    try {
+        const { paymentMethodId } = req.body;
+        await stripe.paymentMethods.detach(paymentMethodId);
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Detach Payment Method Error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getSubscriptionStatus = async (req: Request, res: Response) => {
+    try {
+        const { customer_email } = req.query;
+        if (!customer_email) {
+            return res.status(400).json({ success: false, error: 'Customer email is required' });
+        }
+
+        const stripeCustomerId = await getOrCreateStripeCustomer(customer_email as string);
+        const subscriptions = await stripe.subscriptions.list({
+            customer: stripeCustomerId,
+            limit: 1,
+            status: 'all',
+            expand: ['data.plan.product']
+        });
+
+        if (subscriptions.data.length === 0) {
+            return res.json({ success: true, data: null });
+        }
+
+        const sub = subscriptions.data[0] as any;
+        return res.json({
+            success: true,
+            data: {
+                id: sub.id,
+                status: sub.status,
+                current_period_end: sub.current_period_end,
+                plan: {
+                    id: sub.plan?.id,
+                    name: sub.plan?.product?.name || 'Active Plan',
+                    amount: sub.plan?.amount,
+                    currency: sub.plan?.currency
+                }
+            }
+        });
+    } catch (error: any) {
+        console.error('Get Subscription Status Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
     }
 };

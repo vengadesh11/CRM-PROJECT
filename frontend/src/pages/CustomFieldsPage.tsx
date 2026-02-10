@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import WebhooksTab from '../components/settings/WebhooksTab';
 import IntegrationsTab from '../components/settings/IntegrationsTab';
 import ApiEndpointsTab from '../components/settings/ApiEndpointsTab';
+import BillingTab from '../components/settings/BillingTab';
 import {
     AdjustmentsHorizontalIcon,
     Cog6ToothIcon,
@@ -17,7 +18,8 @@ import {
     TrashIcon,
     GlobeAltIcon,
     PuzzlePieceIcon,
-    CodeBracketIcon
+    CodeBracketIcon,
+    CreditCardIcon
 } from '@heroicons/react/24/outline';
 
 type ModuleKey = 'leads' | 'deals' | 'customers';
@@ -43,7 +45,7 @@ interface CustomField {
 
 export default function CustomFieldsPage() {
     const { getAccessToken, hasPermission } = useAuth();
-    const [activeTab, setActiveTab] = useState<'sales' | 'custom' | 'integrations' | 'webhooks' | 'developer'>('custom');
+    const [activeTab, setActiveTab] = useState<'sales' | 'custom' | 'integrations' | 'webhooks' | 'developer' | 'billing'>('custom');
     const [activeModule, setActiveModule] = useState<ModuleKey>('leads');
     const [fields, setFields] = useState<CustomField[]>([]);
     const [loadingFields, setLoadingFields] = useState(false);
@@ -279,6 +281,17 @@ export default function CustomFieldsPage() {
                             <CodeBracketIcon className="w-5 h-5" />
                             Api Integrations
                         </button>
+                        <button
+                            onClick={() => setActiveTab('billing')}
+                            style={activeTab === 'billing' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'billing'
+                                ? 'shadow-md'
+                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <CreditCardIcon className="w-5 h-5" />
+                            Billing
+                        </button>
                     </div>
 
                     {/* CONTENT AREA */}
@@ -451,6 +464,13 @@ export default function CustomFieldsPage() {
                     {/* Developer Tab Content */}
                     {activeTab === 'developer' && (
                         <ApiEndpointsTab />
+                    )}
+
+                    {/* Billing Tab Content */}
+                    {activeTab === 'billing' && (
+                        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] p-6">
+                            <BillingTab />
+                        </div>
                     )}
                 </div>
             </div>

@@ -11,20 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 // recreating the Stripe object on every render.
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
-const PLANS = [
-    {
-        id: 'price_1Q...', // Replace with actual Stripe Price ID
-        name: 'Basic Plan',
-        price: 'AED 100/mo',
-        features: ['5 Users', 'Basic CRM', 'Email Support']
-    },
-    {
-        id: 'price_1Q_Pro...', // Replace with actual Stripe Price ID
-        name: 'Pro Plan',
-        price: 'AED 250/mo',
-        features: ['Unlimited Users', 'Advanced CRM', 'Priority Support', 'Automation']
-    }
-];
+import { PLANS } from '../config/plans';
 
 const SubscriptionPage: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
@@ -143,7 +130,7 @@ const SubscriptionPage: React.FC = () => {
                         {PLANS.map((plan) => (
                             <div key={plan.name} className="border border-white/10 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all bg-white/5 backdrop-blur-sm">
                                 <h2 className="text-xl font-semibold mb-2 text-white">{plan.name}</h2>
-                                <p className="text-3xl font-bold mb-4 text-white">{plan.price}</p>
+                                <p className="text-3xl font-bold mb-4 text-white">${plan.price}/{plan.period}</p>
                                 <ul className="mb-8 space-y-3">
                                     {plan.features.map((feature, idx) => (
                                         <li key={idx} className="flex items-center text-slate-300">
