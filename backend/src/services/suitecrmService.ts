@@ -23,15 +23,11 @@ export class SuiteCRMService {
             .from('integrations')
             .select('*')
             .eq('provider', this.provider)
-            .limit(1)
-            .single();
+            .maybeSingle();
 
         if (error) {
+            console.error(`Error fetching ${this.provider} integration:`, error);
             throw error;
-        }
-
-        if (!data) {
-            throw new Error('SuiteCRM integration is not configured.');
         }
 
         return data;
@@ -169,10 +165,14 @@ export class SuiteCRMService {
 
     static async getStatus() {
         const integration = await this.getIntegrationRecord();
+        if (!integration) {
+            return { lastSyncAt: null, latestLog: null, isConfigured: false };
+        }
         const logsResult = await IntegrationService.getLogs(integration.id, 1);
         return {
             lastSyncAt: integration.config?.last_sync_at || null,
-            latestLog: logsResult?.data?.[0] || null
+            latestLog: logsResult?.data?.[0] || null,
+            isConfigured: true
         };
     }
 

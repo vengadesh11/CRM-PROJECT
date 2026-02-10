@@ -13,10 +13,11 @@ export class EspoCrmService {
             .from('integrations')
             .select('*')
             .eq('provider', this.provider)
-            .limit(1)
-            .single();
-        if (error) throw error;
-        if (!data) throw new Error('EspoCRM integration not configured.');
+            .maybeSingle();
+        if (error) {
+            console.error(`Error fetching ${this.provider} integration:`, error);
+            throw error;
+        }
         return data;
     }
 
@@ -101,10 +102,14 @@ export class EspoCrmService {
 
     static async getStatus() {
         const integration = await this.getIntegrationRecord();
+        if (!integration) {
+            return { lastSyncAt: null, latestLog: null, isConfigured: false };
+        }
         const logs = await IntegrationService.getLogs(integration.id, 1);
         return {
             lastSyncAt: integration.config?.espocrm_last_sync_at || null,
-            latestLog: logs?.data?.[0] || null
+            latestLog: logs?.data?.[0] || null,
+            isConfigured: true
         };
     }
 
