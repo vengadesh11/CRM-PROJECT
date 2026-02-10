@@ -1,13 +1,11 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Layout from '../components/layout/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
-import { PLANS } from '../config/plans';
 import api from '../utils/api';
 import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [subscription, setSubscription] = useState<any>(null);
     const [loadingSub, setLoadingSub] = useState(true);
 
@@ -28,9 +26,6 @@ export default function DashboardPage() {
         fetchStatus();
     }, [user?.email]);
 
-    const handlePlanSelection = (planName: string) => {
-        navigate(`/subscription?plan=${encodeURIComponent(planName)}`);
-    };
 
     const modules = [
         {
@@ -73,7 +68,6 @@ export default function DashboardPage() {
             <SubscriptionSection
                 subscription={subscription}
                 loading={loadingSub}
-                onSelectPlan={handlePlanSelection}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -101,7 +95,7 @@ export default function DashboardPage() {
     );
 }
 
-const SubscriptionSection = ({ subscription, loading, onSelectPlan }: { subscription: any, loading: boolean, onSelectPlan: (name: string) => void }) => {
+const SubscriptionSection = ({ subscription, loading }: { subscription: any, loading: boolean }) => {
     if (loading) return <div className="mb-8 p-6 surface-panel animate-pulse h-40"></div>;
 
     if (subscription) {
