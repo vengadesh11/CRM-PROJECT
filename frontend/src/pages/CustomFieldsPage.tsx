@@ -10,16 +10,17 @@ import WebhooksTab from '../components/settings/WebhooksTab';
 import IntegrationsTab from '../components/settings/IntegrationsTab';
 import ApiEndpointsTab from '../components/settings/ApiEndpointsTab';
 import BillingTab from '../components/settings/BillingTab';
+import SalesSettingsTab from '../components/settings/SalesSettingsTab';
 import {
     AdjustmentsHorizontalIcon,
-    Cog6ToothIcon,
     PlusIcon,
     PencilSquareIcon,
     TrashIcon,
     GlobeAltIcon,
     PuzzlePieceIcon,
     CodeBracketIcon,
-    CreditCardIcon
+    CreditCardIcon,
+    TagIcon
 } from '@heroicons/react/24/outline';
 
 type ModuleKey = 'leads' | 'deals' | 'customers';
@@ -45,23 +46,16 @@ interface CustomField {
 
 export default function CustomFieldsPage() {
     const { getAccessToken, hasPermission } = useAuth();
-    const [activeTab, setActiveTab] = useState<'sales' | 'custom' | 'integrations' | 'webhooks' | 'developer' | 'billing'>('custom');
+    const [activeTab, setActiveTab] = useState<'sales-settings' | 'custom' | 'integrations' | 'webhooks' | 'developer' | 'billing'>('sales-settings');
     const [activeModule, setActiveModule] = useState<ModuleKey>('leads');
     const [fields, setFields] = useState<CustomField[]>([]);
     const [loadingFields, setLoadingFields] = useState(false);
-    const [salesFields, setSalesFields] = useState<Record<ModuleKey, CustomField[]>>({
-        leads: [],
-        deals: [],
-        customers: []
-    });
-
     const [fieldType, setFieldType] = useState<FieldType>('text');
     const [label, setLabel] = useState('');
     const [placeholder, setPlaceholder] = useState('');
     const [options, setOptions] = useState('');
     const [required, setRequired] = useState(false);
     const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
-
     const API_BASE = useMemo(
         () => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm',
         []
@@ -93,34 +87,6 @@ export default function CustomFieldsPage() {
         }
     }, [activeModule, API_BASE, getAccessToken, activeTab]);
 
-    const loadSalesFields = async () => {
-        try {
-            const token = await getAccessToken();
-            const [leadsRes, dealsRes] = await Promise.all([
-                axios.get(`${API_BASE}/custom-fields`, {
-                    params: { module: 'leads' },
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                axios.get(`${API_BASE}/custom-fields`, {
-                    params: { module: 'deals' },
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-            ]);
-            setSalesFields((prev) => ({
-                ...prev,
-                leads: leadsRes.data.data || [],
-                deals: dealsRes.data.data || []
-            }));
-        } catch (error) {
-            console.error('Failed to load sales fields', error);
-        }
-    };
-
-    useEffect(() => {
-        if (activeTab === 'sales') {
-            loadSalesFields();
-        }
-    }, [activeTab, API_BASE, getAccessToken]);
 
     const resetForm = () => {
         setEditingFieldId(null);
@@ -223,6 +189,17 @@ export default function CustomFieldsPage() {
                     {/* Main Tabs */}
                     <div className="flex items-center gap-4 border-b border-gray-800 pb-1 overflow-x-auto">
                         <button
+                            onClick={() => setActiveTab('sales-settings')}
+                            style={activeTab === 'sales-settings' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'sales-settings'
+                                ? 'shadow-md'
+                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <TagIcon className="w-5 h-5" />
+                            Sales Settings
+                        </button>
+                        <button
                             onClick={() => setActiveTab('custom')}
                             style={activeTab === 'custom' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
                             className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'custom'
@@ -232,17 +209,6 @@ export default function CustomFieldsPage() {
                         >
                             <AdjustmentsHorizontalIcon className="w-5 h-5" />
                             Custom Fields
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('sales')}
-                            style={activeTab === 'sales' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                            className={`px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'sales'
-                                ? 'shadow-md'
-                                : 'text-gray-400 bg-white/5 hover:bg-white/10 hover:text-white'
-                                }`}
-                        >
-                            <Cog6ToothIcon className="w-5 h-5" />
-                            Sales Settings
                         </button>
                         {canViewIntegrations && (
                             <button
@@ -295,6 +261,10 @@ export default function CustomFieldsPage() {
                     </div>
 
                     {/* CONTENT AREA */}
+                    {activeTab === 'sales-settings' && (
+                        <SalesSettingsTab />
+                    )}
+
                     {activeTab === 'custom' && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Left: Field List */}
@@ -419,33 +389,6 @@ export default function CustomFieldsPage() {
                         </div>
                     )}
 
-                    {/* Sales Settings Tab Content */}
-                    {activeTab === 'sales' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {(['leads', 'deals'] as ModuleKey[]).map((module) => (
-                                <div key={module} className="bg-[var(--surface-card)] rounded-xl border border-[var(--surface-border)] p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <div className="text-xs font-bold uppercase tracking-wider text-blue-400">{module} module</div>
-                                            <h3 className="text-lg font-bold text-white capitalize">Sales {module}</h3>
-                                        </div>
-                                    </div>
-                                    {salesFields[module].length === 0 ? (
-                                        <div className="text-sm text-gray-400">No custom fields available yet.</div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {salesFields[module].map((field) => (
-                                                <div key={field.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 flex items-center justify-between">
-                                                    <span>{field.label}</span>
-                                                    <span className="text-xs font-bold uppercase text-gray-500 bg-white/5 px-2 py-0.5 rounded">{field.field_type}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
 
                     {/* Integrations Tab Content */}
                     {activeTab === 'integrations' && canViewIntegrations && (

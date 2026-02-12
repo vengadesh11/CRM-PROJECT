@@ -17,6 +17,16 @@ interface DealFormModalProps {
     initialData?: any;
 }
 
+
+
+interface DealOptions {
+    brands: { id: string; name: string }[];
+    services: { id: string; name: string }[];
+    users: { id: string; first_name: string; last_name: string; email: string }[];
+    leadSources: { id: string; name: string }[];
+    servicesRequired: { id: string; name: string }[];
+}
+
 export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'create', initialData }: DealFormModalProps) {
     const { getAccessToken } = useAuth();
     const isReadOnly = mode === 'view';
@@ -31,14 +41,26 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
         dealDate: new Date().toISOString().split('T')[0],
         closingDate: '',
         remarks: '',
-        department: ''
+        department: '',
+        brandId: '',
+        leadSource: '',
+        serviceId: ''
     });
     const [customFields, setCustomFields] = useState<CustomField[]>([]);
     const [customValues, setCustomValues] = useState<Record<string, any>>({});
     const [uploadingFieldIds, setUploadingFieldIds] = useState<Set<string>>(new Set());
     const [customers, setCustomers] = useState<any[]>([]);
+    const [dealOptions, setDealOptions] = useState<DealOptions>({
+        brands: [],
+        services: [],
+        users: [],
+        leadSources: [],
+        servicesRequired: []
+    });
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
     const importInputRef = React.useRef<HTMLInputElement>(null);
+    const optionsToSelect = (items: { id: string; name: string }[]) =>
+        [{ value: '', label: 'Select...' }, ...items.map(item => ({ value: item.id, label: item.name }))];
 
     const handleIndividualExport = () => {
         // 1. Prepare data object with all fields flattened
@@ -54,6 +76,9 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
             closingDate: formData.closingDate,
             remarks: formData.remarks,
             department: formData.department,
+            brandId: formData.brandId,
+            leadSource: formData.leadSource,
+            serviceId: formData.serviceId
         };
 
         // Add custom fields with prefix to avoid collisions
@@ -145,6 +170,9 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                     closingDate: importedData.closingDate || prev.closingDate,
                     remarks: importedData.remarks || prev.remarks,
                     department: importedData.department || prev.department,
+                    brandId: importedData.brandId || prev.brandId,
+                    leadSource: importedData.leadSource || prev.leadSource,
+                    serviceId: importedData.serviceId || prev.serviceId,
                 }));
 
                 // Attempt to match customer if CIF is imported
@@ -182,35 +210,51 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const prevInitialDataId = React.useRef<string | null>(null);
 
     useEffect(() => {
+        if (!isOpen) return;
+
         const loadInitialData = async () => {
-            if (!isOpen) {
-                initializedRef.current = false;
-                return;
-            }
             try {
                 const token = await getAccessToken();
 
-                // Load Custom Fields
-                const cfResponse = await axios.get(`${API_BASE}/custom-fields`, {
-                    params: { module: 'deals' },
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setCustomFields(cfResponse.data.data || []);
+                const results = await Promise.allSettled([
+                    axios.get(`${API_BASE}/custom-fields`, { params: { module: 'deals' }, headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`${API_BASE}/deals/options`, { headers: { Authorization: `Bearer ${token}` } })
+                ]);
 
-                // Load Customers for selection -- Only if we haven't loaded them yet or want to refresh?
-                // Ideally we load this once or check if cached. For now, keep loading but don't depend on it for form init if possible.
-                const custResponse = await axios.get(`${API_BASE}/customers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setCustomers(custResponse.data.data || []);
+                const fieldsResult = results[0];
+                const customersResult = results[1];
+                const optionsResult = results[2];
+
+                if (fieldsResult.status === 'fulfilled') {
+                    setCustomFields(fieldsResult.value.data.data || []);
+                } else {
+                    console.error('Failed to load custom fields:', fieldsResult.reason);
+                }
+
+                if (customersResult.status === 'fulfilled') {
+                    setCustomers(customersResult.value.data.data || []);
+                } else {
+                    console.error('Failed to load customers:', customersResult.reason);
+                }
+
+                if (optionsResult.status === 'fulfilled') {
+                    setDealOptions(optionsResult.value.data.data || {
+                        brands: [],
+                        services: [],
+                        users: [],
+                        leadSources: [],
+                        servicesRequired: []
+                    });
+                } else {
+                    console.error('Failed to load deal options:', optionsResult.reason);
+                }
             } catch (error) {
                 console.error('Failed to load initial deal form data:', error);
             }
         };
 
-        if (isOpen) {
-            loadInitialData();
-        }
+        loadInitialData();
     }, [API_BASE, getAccessToken, isOpen]);
 
     useEffect(() => {
@@ -266,7 +310,10 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                     dealDate: initialData?.deal_date ? new Date(initialData.deal_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                     closingDate: initialData?.closing_date ? new Date(initialData.closing_date).toISOString().split('T')[0] : (initialData?.expected_close_date ? new Date(initialData.expected_close_date).toISOString().split('T')[0] : ''),
                     remarks: initialData?.remarks || initialData?.custom_data?.remarks || '',
-                    department: initialData?.department || ''
+                    department: initialData?.department || '',
+                    brandId: initialData?.brand_id || initialData?.brand || '',
+                    leadSource: initialData?.lead_source || '',
+                    serviceId: initialData?.service || initialData?.service_required_id || ''
                 });
 
                 initializedRef.current = true;
@@ -291,9 +338,12 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
             closing_date: formData.closingDate || null,
             remarks: formData.remarks,
             department: formData.department,
+            brand: formData.brandId || null, // Changed from brand_id to brand to match controller expected body
+            lead_source: formData.leadSource || null,
+            service: formData.serviceId || null, // Changed from service_required_id to service
             custom_data: {
                 ...customValues,
-                remarks: formData.remarks // Store remarks in custom_data too as backup
+                remarks: formData.remarks
             }
         });
     };
@@ -413,6 +463,33 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                             </div>
                         </div>
 
+                        {/* Deal Details (Brand, Source, Service) */}
+                        <div>
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Deal Details</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Select
+                                    label="Brand"
+                                    options={optionsToSelect(dealOptions.brands)}
+                                    value={formData.brandId}
+                                    onChange={(e) => setFormData({ ...formData, brandId: e.target.value })}
+                                    disabled={isReadOnly}
+                                />
+                                <Select
+                                    label="Lead Source"
+                                    options={optionsToSelect(dealOptions.leadSources)}
+                                    value={formData.leadSource}
+                                    onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
+                                    disabled={isReadOnly}
+                                />
+                                <Select
+                                    label="Service"
+                                    options={optionsToSelect(dealOptions.servicesRequired.length ? dealOptions.servicesRequired : dealOptions.services)}
+                                    value={formData.serviceId}
+                                    onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
+                                    disabled={isReadOnly}
+                                />
+                            </div>
+                        </div>
 
                         {/* Financials */}
                         <div>

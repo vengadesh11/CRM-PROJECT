@@ -42,13 +42,7 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
     const [activeTab, setActiveTab] = useState<'Overview' | 'Deal'>('Overview');
 
     // Service Categories State for DnD
-    const [serviceCategories, setServiceCategories] = useState([
-        'Audit Report',
-        'Book Keeping',
-        'CT Filling',
-        'Registration',
-        'VAT Filling'
-    ]);
+    const [serviceCategories, setServiceCategories] = useState<{ id: string; name: string }[]>([]);
 
     const [isDealModalOpen, setIsDealModalOpen] = useState(false);
     const [dealModalMode, setDealModalMode] = useState<'create' | 'edit'>('create');
@@ -64,16 +58,31 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
         })
     );
 
+    // Fetch Services and initialize expanded state
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const token = await getAccessToken();
+                const response = await axios.get(`http://localhost:3001/api/crm/sales-settings/service-required`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (response.data && Array.isArray(response.data.data)) {
+                    setServiceCategories(response.data.data);
+                    setExpandedServices(new Set(response.data.data.map((s: any) => s.id)));
+                }
+            } catch (error) {
+                console.error("Failed to fetch services", error);
+            }
+        };
+        fetchServices();
+    }, [getAccessToken]);
+
     // Fetch Deals
     useEffect(() => {
         const fetchDeals = async () => {
             if (activeTab === 'Deal' && customer?.cif) {
                 try {
                     const token = await getAccessToken();
-                    // Assuming endpoint supports filtering by CIF or we filter client side
-                    // If endpoint is /deals, we might need a query param. 
-                    // Using generic endpoint and filtering for now based on implementation plan assumption 
-                    // or standard REST practice.
                     const response = await axios.get(`http://localhost:3001/api/crm/deals`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
@@ -95,19 +104,19 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
 
         if (over && active.id !== over.id) {
             setServiceCategories((items) => {
-                const oldIndex = items.indexOf(active.id as string);
-                const newIndex = items.indexOf(over.id as string);
+                const oldIndex = items.findIndex(item => item.id === active.id);
+                const newIndex = items.findIndex(item => item.id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
     };
 
-    const handleCreateDeal = (serviceName: string) => {
+    const handleCreateDeal = (service: { id: string, name: string }) => {
         setDealInitialData({
-            name: serviceName,
+            name: service.name,
             cif: customer.cif,
             company_name: customer.company_name || customer.display_name,
-            // Pre-fill other fields if necessary
+            service: service.id, // Pre-fill the service ID
         });
         setDealModalMode('create');
         setIsDealModalOpen(true);
@@ -120,13 +129,11 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
 
             if (dealModalMode === 'edit' && dealInitialData?.id) {
                 // UPDATE existing deal
-                console.log("Updating deal:", dealInitialData.id, data);
                 await axios.put(`http://localhost:3001/api/crm/deals/${dealInitialData.id}`, data, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             } else {
                 // CREATE new deal
-                console.log("Creating deal:", data);
                 await axios.post(`http://localhost:3001/api/crm/deals`, data, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -152,28 +159,23 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
 
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set());
 
-    // Initialize expanded state with all services open by default
-    useEffect(() => {
-        setExpandedServices(new Set(serviceCategories));
-    }, [serviceCategories]);
-
     // Toggle Expand/Collapse
-    const toggleExpand = (serviceName: string) => {
+    const toggleExpand = (serviceId: string) => {
         setExpandedServices(prev => {
             const next = new Set(prev);
-            if (next.has(serviceName)) {
-                next.delete(serviceName);
+            if (next.has(serviceId)) {
+                next.delete(serviceId);
             } else {
-                next.add(serviceName);
+                next.add(serviceId);
             }
             return next;
         });
     };
 
     // Service Actions
-    const handleEditService = (serviceName: string) => {
-        // Find the active (open) deal or the most recent deal for this service
-        const dealsForService = customerDeals.filter(d => d.name === serviceName);
+    const handleEditService = (service: { id: string, name: string }) => {
+        // Find the active (open) deal or the most recent deal for this service using service ID
+        const dealsForService = customerDeals.filter(d => d.service === service.id);
         const activeDeal = dealsForService.find(d => !d.service_closed) || dealsForService[0];
 
         if (activeDeal) {
@@ -181,19 +183,19 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
             setDealModalMode('edit');
         } else {
             setDealInitialData({
-                name: serviceName,
+                name: service.name,
                 cif: customer.cif,
                 company_name: customer.company_name || customer.display_name,
+                service: service.id,
             });
             setDealModalMode('create');
         }
         setIsDealModalOpen(true);
     };
 
-    const handleDeleteService = (serviceName: string) => {
-
-        if (confirm(`Are you sure you want to delete "${serviceName}"?`)) {
-            setServiceCategories(items => items.filter(item => item !== serviceName));
+    const handleDeleteService = (service: { id: string, name: string }) => {
+        if (confirm(`Are you sure you want to delete "${service.name}"?`)) {
+            setServiceCategories(items => items.filter(item => item.id !== service.id));
         }
     };
 
@@ -223,13 +225,13 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
         onEdit,
         onDelete
     }: {
-        service: string,
+        service: { id: string; name: string },
         deals: any[],
         isExpanded: boolean,
         onToggle: () => void,
-        onCreate: (s: string) => void,
-        onEdit: (s: string) => void,
-        onDelete: (s: string) => void
+        onCreate: (s: { id: string; name: string }) => void,
+        onEdit: (s: { id: string; name: string }) => void,
+        onDelete: (s: { id: string; name: string }) => void
     }) => {
         const {
             attributes,
@@ -237,7 +239,7 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
             setNodeRef,
             transform,
             transition,
-        } = useSortable({ id: service });
+        } = useSortable({ id: service.id }); // Use service.id as DnD id
 
         const style = {
             transform: CSS.Transform.toString(transform),
@@ -266,7 +268,7 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
                             </svg>
                         </button>
 
-                        <span className="font-bold text-white text-sm">{service}</span>
+                        <span className="font-bold text-white text-sm">{service.name}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -443,11 +445,11 @@ export default function CustomerDetailSplitView({ customer, onEdit, onDelete, on
                             >
                                 {serviceCategories.map((service) => (
                                     <SortableServiceItem
-                                        key={service}
+                                        key={service.id}
                                         service={service}
-                                        deals={customerDeals.filter(d => d.name === service)} // Simple string matching for now
-                                        isExpanded={expandedServices.has(service)}
-                                        onToggle={() => toggleExpand(service)}
+                                        deals={customerDeals.filter(d => d.service === service.id)}
+                                        isExpanded={expandedServices.has(service.id)}
+                                        onToggle={() => toggleExpand(service.id)}
                                         onCreate={handleCreateDeal}
                                         onEdit={handleEditService}
                                         onDelete={handleDeleteService}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { requirePermission } from '../middleware/permission';
 import * as leadsController from '../controllers/leads';
+import * as leadOptionsController from '../controllers/leadOptions';
 
 const router = Router();
 
@@ -10,6 +11,9 @@ router.use(authenticateToken);
 
 // POST /api/crm/leads/bulk-delete - Bulk delete leads
 router.post('/bulk-delete', requirePermission('leads.delete'), leadsController.bulkDeleteLeads);
+
+// GET /api/crm/leads/options - Get lead creation options (brands, services, etc.)
+router.get('/options', leadOptionsController.getLeadOptions);
 
 // GET /api/crm/leads - Get all leads
 router.get('/', requirePermission('leads.view'), leadsController.getAllLeads);

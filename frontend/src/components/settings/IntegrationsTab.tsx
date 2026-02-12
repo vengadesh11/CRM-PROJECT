@@ -27,7 +27,8 @@ const INTEGRATION_LOGOS: Record<string, string> = {
     sendgrid: 'https://cdn.iconscout.com/icon/free/png-256/free-sendgrid-logo-icon-download-in-svg-png-gif-file-formats--technology-social-media-company-brand-vol-6-pack-logos-icons-2945119.png',
     zapier: 'https://cdn.iconscout.com/icon/free/png-256/free-zapier-logo-icon-download-in-svg-png-gif-file-formats--technology-social-media-company-brand-vol-7-pack-logos-icons-2945155.png',
     openai: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/1024px-ChatGPT_logo.svg.png',
-    stripe: 'https://cdn.iconscout.com/icon/free/png-256/free-stripe-logo-icon-download-in-svg-png-gif-file-formats--payment-gateway-pay-finance-technology-company-brand-vol-6-pack-logos-icons-2945107.png'
+    stripe: 'https://cdn.iconscout.com/icon/free/png-256/free-stripe-logo-icon-download-in-svg-png-gif-file-formats--payment-gateway-pay-finance-technology-company-brand-vol-6-pack-logos-icons-2945107.png',
+    whatsapp: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1024px-WhatsApp.svg.png'
 };
 
 export default function IntegrationsTab() {
@@ -36,6 +37,10 @@ export default function IntegrationsTab() {
     const [loading, setLoading] = useState(false);
     const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
     const [apiKey, setApiKey] = useState('');
+    // WhatsApp specific fields
+    const [phoneNumberId, setPhoneNumberId] = useState('');
+    const [businessAccountId, setBusinessAccountId] = useState('');
+    const [verifyToken, setVerifyToken] = useState('');
 
     const canManage = hasPermission('integrations.edit');
     const requireToken = async () => {
@@ -235,10 +240,28 @@ export default function IntegrationsTab() {
         if (!selectedIntegration) return;
         try {
             const token = await requireToken();
-            // Assuming the simple config just needs a generic 'api_key' secret for now
-            const secrets = apiKey ? { api_token: apiKey } : undefined;
+            let secrets: any = {};
+            let configUpdates: any = {};
+
+            if (selectedIntegration.provider === 'whatsapp') {
+                secrets = {
+                    accessToken: apiKey, // Use the main apiKey state for the access token
+                };
+                configUpdates = {
+                    phoneNumberId,
+                    businessAccountId,
+                    verifyToken
+                };
+            } else {
+                // Default behavior for other integrations
+                secrets = apiKey ? { api_token: apiKey } : undefined;
+            }
 
             await updateIntegration(token, selectedIntegration.id, {
+                config: {
+                    ...selectedIntegration.config,
+                    ...configUpdates
+                },
                 secrets
             });
 
@@ -439,7 +462,18 @@ export default function IntegrationsTab() {
 
                             {canManage && (
                                 <button
-                                    onClick={() => setSelectedIntegration(integration)}
+                                    onClick={() => {
+                                        setSelectedIntegration(integration);
+                                        // Pre-fill existing config if available
+                                        if (integration.provider === 'whatsapp') {
+                                            setPhoneNumberId(integration.config?.phoneNumberId || '');
+                                            setBusinessAccountId(integration.config?.businessAccountId || '');
+                                            setVerifyToken(integration.config?.verifyToken || '');
+                                            setApiKey(''); // Clear secret
+                                        } else {
+                                            setApiKey('');
+                                        }
+                                    }}
                                     className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
                                 >
                                     <PencilSquareIcon className="w-5 h-5" />
@@ -456,17 +490,52 @@ export default function IntegrationsTab() {
                 title={`Configure ${selectedIntegration?.name}`}
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-400">
-                        Enter your API key or secret token to enable this integration.
-                        Values are encrypted securely on the server.
-                    </p>
-                    <Input
-                        label="API Key / Token"
-                        type="password"
-                        value={apiKey || ''}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="sk_live_..."
-                    />
+                    {selectedIntegration?.provider === 'whatsapp' ? (
+                        <>
+                            <p className="text-sm text-gray-400">
+                                Configure your WhatsApp Business API credentials from the Meta Developer Portal.
+                            </p>
+                            <Input
+                                label="Phone Number ID"
+                                value={phoneNumberId}
+                                onChange={(e) => setPhoneNumberId(e.target.value)}
+                                placeholder="e.g. 100609346..."
+                            />
+                            <Input
+                                label="WhatsApp Business Account ID"
+                                value={businessAccountId}
+                                onChange={(e) => setBusinessAccountId(e.target.value)}
+                                placeholder="e.g. 102456789..."
+                            />
+                            <Input
+                                label="System User Access Token"
+                                type="password"
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                placeholder="Permanent access token"
+                            />
+                            <Input
+                                label="Verify Token"
+                                value={verifyToken}
+                                onChange={(e) => setVerifyToken(e.target.value)}
+                                placeholder="Your custom verify token for webhooks"
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-sm text-gray-400">
+                                Enter your API key or secret token to enable this integration.
+                                Values are encrypted securely on the server.
+                            </p>
+                            <Input
+                                label="API Key / Token"
+                                type="password"
+                                value={apiKey || ''}
+                                onChange={(e) => setApiKey(e.target.value)}
+                                placeholder="sk_live_..."
+                            />
+                        </>
+                    )}
 
                     <div className="flex justify-end gap-3 mt-6">
                         <Button variant="secondary" onClick={() => setSelectedIntegration(null)}>Cancel</Button>

@@ -6,6 +6,7 @@ export const getAllCustomFields = async (req: AuthRequest, res: Response): Promi
     try {
         const { module } = req.query;
 
+
         let query = supabaseAdmin
             .from('custom_fields')
             .select('*')

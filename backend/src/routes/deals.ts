@@ -2,12 +2,16 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { requirePermission } from '../middleware/permission';
 import * as dealsController from '../controllers/deals';
+import * as leadOptionsController from '../controllers/leadOptions';
 
 const router = Router();
 
 router.use(authenticateToken);
 
 router.post('/bulk-delete', requirePermission('deals.delete'), dealsController.bulkDeleteDeals);
+
+// GET /api/crm/deals/options - Get deal creation options (brands, services, etc.)
+router.get('/options', leadOptionsController.getLeadOptions);
 
 router.get('/', requirePermission('deals.view'), dealsController.getAllDeals);
 router.get('/:id', requirePermission('deals.view'), dealsController.getDealById);

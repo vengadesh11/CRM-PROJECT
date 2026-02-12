@@ -7,8 +7,8 @@ const router = Router();
 
 router.use(authenticateToken);
 
-router.get('/', requirePermission('settings.view'), customFieldsController.getAllCustomFields);
-router.get('/:id', requirePermission('settings.view'), customFieldsController.getCustomFieldById);
+router.get('/', customFieldsController.getAllCustomFields);
+router.get('/:id', customFieldsController.getCustomFieldById);
 router.post('/', requirePermission('settings.edit'), customFieldsController.createCustomField);
 router.put('/:id', requirePermission('settings.edit'), customFieldsController.updateCustomField);
 router.delete('/:id', requirePermission('settings.edit'), customFieldsController.deleteCustomField);

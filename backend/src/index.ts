@@ -27,7 +27,9 @@ import suiteCrmRouter from './routes/suitecrm';
 
 import espocrmRouter from './routes/espocrm';
 import orocrmRouter from './routes/orocrm';
+import whatsappRouter from './routes/whatsapp';
 import integrationsRouter from './routes/integrations';
+import salesSettingsRouter from './routes/salesSettings';
 
 
 // Force restart
@@ -106,7 +108,9 @@ app.use('/api/crm/integrations/suitecrm', suiteCrmRouter);
 
 app.use('/api/crm/integrations/espocrm', espocrmRouter);
 app.use('/api/crm/integrations/orocrm', orocrmRouter);
+app.use('/api/crm/integrations/whatsapp', whatsappRouter);
 app.use('/api/crm/integrations', integrationsRouter);
+app.use('/api/crm/sales-settings', salesSettingsRouter);
 
 
 

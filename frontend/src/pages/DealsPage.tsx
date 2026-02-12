@@ -52,6 +52,14 @@ export default function DealsPage() {
     const [isDraggingFile, setIsDraggingFile] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [customFields, setCustomFields] = useState<CustomField[]>([]);
+    const [leadOptions, setLeadOptions] = useState<any>({
+        brands: [],
+        services: [],
+        qualifications: [],
+        users: [],
+        leadSources: [],
+        servicesRequired: []
+    });
     const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
         sno: true,
         cif: true,
@@ -114,21 +122,26 @@ export default function DealsPage() {
     }, [searchTerm]);
 
     useEffect(() => {
-        const loadCustomFields = async () => {
+        const fetchMetadata = async () => {
             try {
                 const token = await getAccessToken();
-                const response = await axios.get(`${API_BASE}/custom-fields`, {
-                    params: { module: 'deals' },
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setCustomFields(response.data.data || []);
+                const [fieldsRes, optionsRes] = await Promise.all([
+                    axios.get(`${API_BASE}/custom-fields`, {
+                        params: { module: 'deals' },
+                        headers: { Authorization: `Bearer ${token}` }
+                    }),
+                    axios.get(`${API_BASE}/leads/options`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                ]);
+                setCustomFields(fieldsRes.data.data || []);
+                setLeadOptions(optionsRes.data.data || {});
             } catch (error) {
-                console.error('Failed to load deal custom fields:', error);
+                console.error('Failed to fetch metadata:', error);
             }
         };
-
-        loadCustomFields();
-    }, [getAccessToken]);
+        fetchMetadata();
+    }, [API_BASE, getAccessToken]);
 
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -487,11 +500,26 @@ export default function DealsPage() {
         { id: 'cif', label: 'CIF No', type: 'text' },
         { id: 'name', label: 'Name', type: 'text' },
         { id: 'company_name', label: 'Company Name', type: 'text' },
-        { id: 'brand', label: 'Brand', type: 'text' },
+        {
+            id: 'brand',
+            label: 'Brand',
+            type: 'select',
+            options: leadOptions.brands?.map((b: any) => b.name) || []
+        },
         { id: 'email', label: 'Email', type: 'text' },
         { id: 'contact_no', label: 'Contact No', type: 'text' },
-        { id: 'lead_source', label: 'Lead Source', type: 'select', options: ['LinkedIn', 'Website', 'Referral'] },
-        { id: 'services', label: 'Services', type: 'select', options: ['Audit', 'Tax Filing', 'Consulting'] },
+        {
+            id: 'lead_source',
+            label: 'Lead Source',
+            type: 'select',
+            options: leadOptions.leadSources?.map((s: any) => s.name) || []
+        },
+        {
+            id: 'services',
+            label: 'Services',
+            type: 'select',
+            options: (leadOptions.servicesRequired?.length ? leadOptions.servicesRequired : leadOptions.services)?.map((s: any) => s.name) || []
+        },
         { id: 'service_amount', label: 'Service Amount', type: 'number' },
         { id: 'service_closed', label: 'Service Closed', type: 'select', options: ['Yes', 'No'] },
         { id: 'payment_status', label: 'Payment Status', type: 'select', options: ['Pending', 'Paid'] },
@@ -747,7 +775,7 @@ export default function DealsPage() {
                                     className="mt-2 w-full bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm text-gray-900 focus:ring-2 focus:ring-primary-500 focus:outline-none shadow-sm"
                                 >
                                     <option value="">All</option>
-                                    {(field.options || []).map((option) => (
+                                    {(field.options || []).map((option: string) => (
                                         <option key={option} value={option}>
                                             {option}
                                         </option>
