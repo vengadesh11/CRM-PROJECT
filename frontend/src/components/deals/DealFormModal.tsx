@@ -397,13 +397,96 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
         }
     };
 
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isAutoFilling, setIsAutoFilling] = useState(false);
+    const [isScoring, setIsScoring] = useState(false);
+    const [isDrafting, setIsDrafting] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<any>(null);
+
+    const handleAutoFill = async () => {
+        if (!aiPrompt) return;
+        try {
+            setIsAutoFilling(true);
+            const token = await getAccessToken();
+            const response = await axios.post(`${API_BASE}/ai/deals/smart-fill`,
+                { text: aiPrompt },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data?.success && response.data.data) {
+                const aiData = response.data.data;
+                setFormData(prev => ({
+                    ...prev,
+                    name: aiData.name || prev.name,
+                    amount: aiData.amount?.toString() || prev.amount,
+                    remarks: aiData.remarks || prev.remarks,
+                    closingDate: aiData.closing_date || prev.closingDate
+                }));
+                setAiPrompt('');
+            }
+        } catch (error) {
+            console.error('Failed to auto-fill deal:', error);
+        } finally {
+            setIsAutoFilling(false);
+        }
+    };
+
+    const handleCalculateScore = async () => {
+        try {
+            setIsScoring(true);
+            const token = await getAccessToken();
+            const response = await axios.post(`${API_BASE}/ai/deals/score`,
+                { dealData: formData },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data?.success) {
+                setAnalysisResult({
+                    score: response.data.score,
+                    analysis: response.data.analysis
+                });
+            }
+        } catch (error) {
+            console.error('Failed to score deal:', error);
+        } finally {
+            setIsScoring(false);
+        }
+    };
+
+    const handleDraftEmail = async () => {
+        try {
+            setIsDrafting(true);
+            const token = await getAccessToken();
+            const response = await axios.post(`${API_BASE}/ai/deals/draft-email`,
+                { dealData: formData },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data?.success && response.data.draft) {
+                // For now, we'll just alert the draft. In a real app, this might open an editor.
+                alert(response.data.draft);
+            }
+        } catch (error) {
+            console.error('Failed to draft email:', error);
+        } finally {
+            setIsDrafting(false);
+        }
+    };
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Create New Deal" maxWidth="4xl">
             <div className="space-y-6">
                 {/* Header Actions */}
                 <div className="absolute top-4 right-16">
-                    <Button variant="secondary" size="sm" icon={EnvelopeIcon} className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600">
-                        Draft Email
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={EnvelopeIcon}
+                        className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
+                        onClick={handleDraftEmail}
+                        disabled={isDrafting}
+                    >
+                        {isDrafting ? 'Drafting...' : 'Draft Email'}
                     </Button>
                 </div>
 
@@ -416,11 +499,17 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                     <div className="flex gap-2">
                         <textarea
                             placeholder="Ahmed from TechCorp wants an Audit for 15k, closing next month..."
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
                             className="flex-1 bg-slate-900/50 border border-slate-600 rounded-lg p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 h-16 resize-none shadow-sm"
                         />
-                        <button className="bg-primary-600 hover:bg-primary-500 text-white rounded-lg px-4 flex flex-col items-center justify-center gap-1 transition-colors w-24 shadow-sm">
-                            <SparklesIcon className="w-5 h-5" />
-                            <span className="text-xs font-bold">Auto-Fill</span>
+                        <button
+                            className="bg-primary-600 hover:bg-primary-500 text-white rounded-lg px-4 flex flex-col items-center justify-center gap-1 transition-colors w-24 shadow-sm disabled:opacity-50"
+                            onClick={handleAutoFill}
+                            disabled={isAutoFilling || !aiPrompt}
+                        >
+                            <SparklesIcon className={`w-5 h-5 ${isAutoFilling ? 'animate-pulse' : ''}`} />
+                            <span className="text-xs font-bold">{isAutoFilling ? 'Filling...' : 'Auto-Fill'}</span>
                         </button>
                     </div>
                 </div>
@@ -553,10 +642,22 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                                 Deal Scoring
                             </div>
                             <div className="bg-slate-900/30 rounded-lg p-4 text-center mb-4">
-                                <p className="text-xs text-gray-400 mb-2">Analyze deal details to generate a quality score and action plan.</p>
+                                {analysisResult ? (
+                                    <div className="space-y-2">
+                                        <div className="text-3xl font-black text-primary-500">{analysisResult.score}/100</div>
+                                        <p className="text-xs text-gray-400">{analysisResult.analysis}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-400 mb-2">Analyze deal details to generate a quality score and action plan.</p>
+                                )}
                             </div>
-                            <Button className="w-full bg-primary-600 hover:bg-primary-500" icon={SparklesIcon}>
-                                <span className="text-white">Calculate Deal Score</span>
+                            <Button
+                                className="w-full bg-primary-600 hover:bg-primary-500"
+                                icon={SparklesIcon}
+                                onClick={handleCalculateScore}
+                                disabled={isScoring}
+                            >
+                                <span className="text-white">{isScoring ? 'Analyzing...' : 'Calculate Deal Score'}</span>
                             </Button>
                         </div>
                     </div>

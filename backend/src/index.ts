@@ -30,6 +30,7 @@ import orocrmRouter from './routes/orocrm';
 import whatsappRouter from './routes/whatsapp';
 import integrationsRouter from './routes/integrations';
 import salesSettingsRouter from './routes/salesSettings';
+import aiRouter from './routes/ai';
 
 
 // Force restart
@@ -111,6 +112,7 @@ app.use('/api/crm/integrations/orocrm', orocrmRouter);
 app.use('/api/crm/integrations/whatsapp', whatsappRouter);
 app.use('/api/crm/integrations', integrationsRouter);
 app.use('/api/crm/sales-settings', salesSettingsRouter);
+app.use('/api/crm/ai', aiRouter);
 
 
 
