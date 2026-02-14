@@ -24,6 +24,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm';
+const LEADS_COLUMN_PREF_KEY = 'docuflow.leads.columns';
 
 export default function LeadsPage() {
     const navigate = useNavigate();
@@ -92,6 +93,7 @@ export default function LeadsPage() {
         'remarks',
         'department'
     ]);
+    const [columnPrefsLoaded, setColumnPrefsLoaded] = useState(false);
     const [dragColumnId, setDragColumnId] = useState<string | null>(null);
     const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
     const [leadToConvert, setLeadToConvert] = useState<any | null>(null);
@@ -582,6 +584,37 @@ export default function LeadsPage() {
     const columnIds = allColumns.map((col) => col.id);
 
     useEffect(() => {
+        if (columnPrefsLoaded) return;
+        try {
+            const stored = localStorage.getItem(LEADS_COLUMN_PREF_KEY);
+            if (!stored) return;
+            const parsed = JSON.parse(stored);
+            if (parsed.columnOrder && Array.isArray(parsed.columnOrder)) {
+                setColumnOrder((prev) => {
+                    const filtered = parsed.columnOrder.filter((id: string) => columnIds.includes(id));
+                    const missing = columnIds.filter((id) => !filtered.includes(id));
+                    return [...filtered, ...missing];
+                });
+            }
+            if (parsed.visibleColumns && typeof parsed.visibleColumns === 'object') {
+                setVisibleColumns((prev) => {
+                    const next: Record<string, boolean> = { ...prev, ...parsed.visibleColumns };
+                    columnIds.forEach((id) => {
+                        if (next[id] === undefined) next[id] = true;
+                    });
+                    Object.keys(next).forEach((id) => {
+                        if (!columnIds.includes(id)) delete next[id];
+                    });
+                    return next;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load lead column preferences:', error);
+        }
+        setColumnPrefsLoaded(true);
+    }, [columnIds]);
+
+    useEffect(() => {
         setColumnOrder((prev) => {
             if (prev.length === 0) return columnIds;
             const existing = prev.filter((id) => columnIds.includes(id));
@@ -599,6 +632,18 @@ export default function LeadsPage() {
             return next;
         });
     }, [customFields.length]);
+
+    useEffect(() => {
+        if (!columnPrefsLoaded) return;
+        try {
+            localStorage.setItem(LEADS_COLUMN_PREF_KEY, JSON.stringify({
+                columnOrder,
+                visibleColumns
+            }));
+        } catch (error) {
+            console.error('Failed to save lead column preferences:', error);
+        }
+    }, [columnOrder, visibleColumns, columnPrefsLoaded]);
 
     const columnsById = allColumns.reduce<Record<string, { id: string; label: string }>>((acc, column) => {
         acc[column.id] = column;

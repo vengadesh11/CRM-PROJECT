@@ -107,7 +107,7 @@ export default function CustomersPage() {
     const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
     const [customers, setCustomers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'table' | 'split'>('table');
+    const [viewMode, setViewMode] = useState<'table' | 'split'>('split');
     const [activeCustomerId, setActiveCustomerId] = useState<string | null>(null);
 
     console.log('[CustomersPage] State - customers:', customers.length, 'viewMode:', viewMode);
@@ -536,9 +536,9 @@ const API_BASE = useMemo(
                 </div>
             ) : (
                 /* Split View Layout */
-                <div className="fixed inset-0 z-[40] flex mt-16 bg-[var(--surface-page)]">
+                <div className="flex flex-1 gap-6 min-h-[70vh] bg-transparent">
                     {/* Left Sidebar List */}
-                    <div className="w-80 md:w-96 border-r border-[var(--surface-border)] flex flex-col h-full bg-[var(--surface-panel)]">
+                    <div className="w-[24rem] lg:w-[26rem] border border-[var(--surface-border)] bg-[var(--surface-panel)] rounded-3xl flex flex-col h-full shadow-xl">
                         <div className="p-6 pb-2">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
