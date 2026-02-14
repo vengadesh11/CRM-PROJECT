@@ -1,0 +1,6 @@
+
+> docuflow-crm-backend@1.0.0 build
+> tsc
+
+src/routes/suitecrm.ts(14,22): error TS6133: 'req' is declared but its value is never read.
+src/services/whatsappService.ts(3,11): error TS6196: 'WhatsAppMessage' is declared but never used.

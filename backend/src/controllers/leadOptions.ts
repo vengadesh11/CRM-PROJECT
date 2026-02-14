@@ -49,19 +49,19 @@ export const getLeadOptions = async (_req: AuthRequest, res: Response): Promise<
         // Execute all fetches in parallel
         const [
             brands,
-            services,
             qualifications,
             leadSources,
             servicesRequired,
             leadOwners,
+            leadStatuses,
             users
         ] = await Promise.all([
             fetchOptions('brands'),
-            fetchOptions('services'),
             fetchOptions('lead_qualifications', 'id, name, score', 'score', false),
             fetchOptions('lead_sources'),
             fetchOptions('service_required'),
             fetchOptions('lead_owners'),
+            fetchOptions('lead_statuses'),
             fetchOptions('users', 'id, first_name, last_name, email', 'first_name')
         ]);
 
@@ -69,7 +69,7 @@ export const getLeadOptions = async (_req: AuthRequest, res: Response): Promise<
             success: true,
             data: {
                 brands,
-                services,
+                leadStatuses,
                 qualifications,
                 users,
                 leadSources,

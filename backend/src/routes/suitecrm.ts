@@ -11,7 +11,7 @@ console.log('LOADING SuiteCRM Routes...'); // DEBUG log
  * SuiteCRM integration endpoints
  * Sync and status endpoints require authentication & permissions
  */
-router.get('/ping', (req, res) => res.send('PONG')); // DEBUG Route
+router.get('/ping', (_req: any, res: any) => res.send('PONG')); // DEBUG Route
 router.post('/sync', authenticateToken, requirePermission('integrations.edit'), suiteCrmController.triggerSync);
 router.get('/status', authenticateToken, requirePermission('integrations.view'), suiteCrmController.getStatus);
 

@@ -11,6 +11,8 @@ const TABLE_MAP: Record<string, string> = {
     'service-closed-statuses': 'service_closed_statuses',
     'brands': 'brands',
     'services': 'services',
+    'lead-status': 'lead_statuses',
+    'lead-statuses': 'lead_statuses',
     'lead-qualifications': 'lead_qualifications'
 };
 
@@ -22,6 +24,8 @@ export const getItems = async (req: AuthRequest, res: Response): Promise<void> =
     try {
         const { category } = req.params;
         const tableName = TABLE_MAP[category];
+
+        console.log(`[DEBUG] GET sales-settings category: ${category}, tableName: ${tableName}`);
 
         if (!tableName) {
             res.status(400).json({
@@ -96,10 +100,17 @@ export const createItem = async (req: AuthRequest, res: Response): Promise<void>
         const { name } = req.body;
         const tableName = TABLE_MAP[category];
 
+        console.log(`[DEBUG] POST sales-settings category: ${category}, tableName: ${tableName}, name: ${name}`);
+
         if (!tableName) {
+            console.error(`[DEBUG] Invalid category requested: "${category}". Available categories: ${Object.keys(TABLE_MAP).join(', ')}`);
             res.status(400).json({
                 success: false,
-                error: 'Invalid category'
+                error: `Invalid category: ${category}. Available: ${Object.keys(TABLE_MAP).join(', ')}`,
+                debug: {
+                    requestedCategory: category,
+                    availableCategories: Object.keys(TABLE_MAP)
+                }
             });
             return;
         }
@@ -157,7 +168,7 @@ export const createItem = async (req: AuthRequest, res: Response): Promise<void>
             throw dbError;
         }
     } catch (error: any) {
-        console.error(`Failed to create ${req.params.category} item:`, error);
+        console.error(`[ERROR] Failed to create ${req.params.category} item:`, error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to create item'

@@ -16,12 +16,8 @@ interface DealFormModalProps {
     mode?: 'create' | 'edit' | 'view';
     initialData?: any;
 }
-
-
-
 interface DealOptions {
     brands: { id: string; name: string }[];
-    services: { id: string; name: string }[];
     users: { id: string; first_name: string; last_name: string; email: string }[];
     leadSources: { id: string; name: string }[];
     servicesRequired: { id: string; name: string }[];
@@ -52,7 +48,6 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const [customers, setCustomers] = useState<any[]>([]);
     const [dealOptions, setDealOptions] = useState<DealOptions>({
         brands: [],
-        services: [],
         users: [],
         leadSources: [],
         servicesRequired: []
@@ -241,7 +236,6 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                 if (optionsResult.status === 'fulfilled') {
                     setDealOptions(optionsResult.value.data.data || {
                         brands: [],
-                        services: [],
                         users: [],
                         leadSources: [],
                         servicesRequired: []
@@ -572,7 +566,7 @@ export default function DealFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                                 />
                                 <Select
                                     label="Service"
-                                    options={optionsToSelect(dealOptions.servicesRequired.length ? dealOptions.servicesRequired : dealOptions.services)}
+                                    options={optionsToSelect(dealOptions.servicesRequired)}
                                     value={formData.serviceId}
                                     onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                                     disabled={isReadOnly}

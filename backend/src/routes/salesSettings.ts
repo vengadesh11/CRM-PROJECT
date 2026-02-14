@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { requirePermission } from '../middleware/permission';
-import * as salesSettingsController from '../controllers/salesSettings';
+import * as salesSettingsController from '../controllers/salessettings';
 
 const router = Router({ mergeParams: true });
 

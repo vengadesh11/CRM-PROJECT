@@ -36,7 +36,6 @@ export default function DealsPage() {
         email: '',
         contact_no: '',
         lead_source: '',
-        services: '',
         service_amount: '',
         service_closed: '',
         payment_status: '',
@@ -54,9 +53,6 @@ export default function DealsPage() {
     const [customFields, setCustomFields] = useState<CustomField[]>([]);
     const [leadOptions, setLeadOptions] = useState<any>({
         brands: [],
-        services: [],
-        qualifications: [],
-        users: [],
         leadSources: [],
         servicesRequired: []
     });
@@ -69,7 +65,6 @@ export default function DealsPage() {
         email: true,
         contact_no: true,
         lead_source: true,
-        services: true,
         service_amount: true,
         service_closed: true,
         payment_status: true,
@@ -87,7 +82,6 @@ export default function DealsPage() {
         'email',
         'contact_no',
         'lead_source',
-        'services',
         'service_amount',
         'service_closed',
         'payment_status',
@@ -256,7 +250,6 @@ export default function DealsPage() {
             email: '',
             contact_no: '',
             lead_source: '',
-            services: '',
             service_amount: '',
             service_closed: '',
             payment_status: '',
@@ -458,8 +451,6 @@ export default function DealsPage() {
                 return deal.contact_number || deal.contactNo || '';
             case 'lead_source':
                 return deal.source_data?.name || deal.lead_source || '';
-            case 'services':
-                return deal.service_data?.name || deal.service || deal.services || '';
             case 'service_amount':
                 return deal.service_amount ?? deal.value ?? '';
             case 'service_closed':
@@ -514,12 +505,6 @@ export default function DealsPage() {
             type: 'select',
             options: leadOptions.leadSources?.map((s: any) => s.name) || []
         },
-        {
-            id: 'services',
-            label: 'Services',
-            type: 'select',
-            options: (leadOptions.servicesRequired?.length ? leadOptions.servicesRequired : leadOptions.services)?.map((s: any) => s.name) || []
-        },
         { id: 'service_amount', label: 'Service Amount', type: 'number' },
         { id: 'service_closed', label: 'Service Closed', type: 'select', options: ['Yes', 'No'] },
         { id: 'payment_status', label: 'Payment Status', type: 'select', options: ['Pending', 'Paid'] },
@@ -538,7 +523,6 @@ export default function DealsPage() {
         { id: 'email', label: 'Email' },
         { id: 'contact_no', label: 'Contact No' },
         { id: 'lead_source', label: 'Lead Source' },
-        { id: 'services', label: 'Services' },
         { id: 'service_amount', label: 'Service Amount' },
         { id: 'service_closed', label: 'Service Closed' },
         { id: 'payment_status', label: 'Payment Status' },

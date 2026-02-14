@@ -24,7 +24,7 @@ const CATEGORIES = [
     { id: 'payment-statuses', label: 'Payment Statuses' },
     { id: 'service-closed-statuses', label: 'Service Closed Statuses' },
     { id: 'brands', label: 'Brands' },
-    { id: 'services', label: 'Services' },
+    { id: 'lead-status', label: 'Lead Status' },
     { id: 'lead-qualifications', label: 'Lead Qualifications' }
 ];
 

@@ -1,26 +1,26 @@
 import supabaseAdmin from '../config/supabase';
 
-interface WhatsAppMessage {
-    messaging_product: 'whatsapp';
-    to: string;
-    type: 'template' | 'text';
-    template?: {
-        name: string;
-        language: {
-            code: string;
-        };
-        components?: any[];
-    };
-    text?: {
-        body: string;
-    };
-}
+// interface WhatsAppMessage {
+//     messaging_product: 'whatsapp';
+//     to: string;
+//     type: 'template' | 'text';
+//     template?: {
+//         name: string;
+//         language: {
+//             code: string;
+//         };
+//         components?: any[];
+//     };
+//     text?: {
+//         body: string;
+//     };
+// }
 
 export class WhatsAppService {
     private static async getCredentials() {
         const { data: integration } = await supabaseAdmin
             .from('integrations')
-            .select('config')
+            .select('id, config')
             .eq('provider', 'whatsapp')
             .single();
 
@@ -41,8 +41,9 @@ export class WhatsAppService {
             return acc;
         }, {});
 
+        const config = integration?.config as any;
         return {
-            phoneNumberId: integration?.config?.phoneNumberId,
+            phoneNumberId: config?.phoneNumberId,
             ...secretMap
         };
     }

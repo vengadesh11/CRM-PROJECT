@@ -29,7 +29,7 @@ import espocrmRouter from './routes/espocrm';
 import orocrmRouter from './routes/orocrm';
 import whatsappRouter from './routes/whatsapp';
 import integrationsRouter from './routes/integrations';
-import salesSettingsRouter from './routes/salesSettings';
+import salesSettingsRouter from './routes/salessettings';
 import aiRouter from './routes/ai';
 
 
@@ -134,7 +134,9 @@ app.use((err: Error, _req: Request, res: Response, _next: any) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 DocuFlow CRM API Server running on port ${PORT}`);
+    console.log(`DocuFlow CRM API Server running on port ${PORT}`);
 });
 
 export default app;
+
+

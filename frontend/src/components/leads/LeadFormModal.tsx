@@ -19,7 +19,7 @@ interface LeadFormModalProps {
 
 interface LeadOptions {
     brands: { id: string; name: string }[];
-    services: { id: string; name: string }[];
+    leadStatuses: { id: string; name: string }[];
     qualifications: { id: string; name: string; score: number }[];
     users: { id: string; first_name: string; last_name: string; email: string }[];
     leadSources: { id: string; name: string }[];
@@ -32,15 +32,18 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const isReadOnly = mode === 'view';
     const API_BASE = useMemo(() => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm', []);
 
-    // Form State
-    const statusOptions = [
-        { value: 'new', label: 'New' },
-        { value: 'contacted', label: 'Contacted' },
-        { value: 'qualified', label: 'Qualified' },
-        { value: 'nurturing', label: 'Nurturing' },
-        { value: 'converted', label: 'Converted' },
-        { value: 'lost', label: 'Lost' }
-    ];
+    const [customFields, setCustomFields] = useState<CustomField[]>([]);
+    const [customValues, setCustomValues] = useState<Record<string, any>>({});
+    const [uploadingFieldIds, setUploadingFieldIds] = useState<Set<string>>(new Set());
+    const [leadOptions, setLeadOptions] = useState<LeadOptions>({
+        brands: [],
+        leadStatuses: [],
+        qualifications: [],
+        users: [],
+        leadSources: [],
+        servicesRequired: [],
+        leadOwners: []
+    });
 
     const [formData, setFormData] = useState({
         companyName: '',
@@ -59,18 +62,19 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
         remarks: ''
     });
 
-    const [customFields, setCustomFields] = useState<CustomField[]>([]);
-    const [customValues, setCustomValues] = useState<Record<string, any>>({});
-    const [uploadingFieldIds, setUploadingFieldIds] = useState<Set<string>>(new Set());
-    const [leadOptions, setLeadOptions] = useState<LeadOptions>({
-        brands: [],
-        services: [],
-        qualifications: [],
-        users: [],
-        leadSources: [],
-        servicesRequired: [],
-        leadOwners: []
-    });
+    const statusOptions = useMemo(() => {
+        if (!leadOptions.leadStatuses || leadOptions.leadStatuses.length === 0) {
+            return [
+                { value: 'new', label: 'New' },
+                { value: 'contacted', label: 'Contacted' },
+                { value: 'qualified', label: 'Qualified' },
+                { value: 'nurturing', label: 'Nurturing' },
+                { value: 'converted', label: 'Converted' },
+                { value: 'lost', label: 'Lost' }
+            ];
+        }
+        return leadOptions.leadStatuses.map(s => ({ value: s.name.toLowerCase(), label: s.name }));
+    }, [leadOptions.leadStatuses]);
     const [leadScore, setLeadScore] = useState(0);
     const [aiSmartFillText, setAiSmartFillText] = useState('');
     const importInputRef = React.useRef<HTMLInputElement>(null);
@@ -98,7 +102,7 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                 if (optionsResult.status === 'fulfilled') {
                     setLeadOptions(optionsResult.value.data.data || {
                         brands: [],
-                        services: [],
+                        leadStatuses: [],
                         qualifications: [],
                         users: [],
                         leadSources: [],
@@ -455,7 +459,7 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                                 <Select label="Qualification" options={optionsToSelect(leadOptions.qualifications)} value={formData.qualificationId} onChange={e => setFormData({ ...formData, qualificationId: e.target.value })} disabled={isReadOnly} />
                                 <Select
                                     label="Service Required"
-                                    options={optionsToSelect(leadOptions.servicesRequired.length ? leadOptions.servicesRequired : leadOptions.services)}
+                                    options={optionsToSelect(leadOptions.servicesRequired)}
                                     value={formData.serviceId}
                                     onChange={e => setFormData({ ...formData, serviceId: e.target.value })}
                                     disabled={isReadOnly}
