@@ -590,7 +590,7 @@ export default function LeadsPage() {
             if (!stored) return;
             const parsed = JSON.parse(stored);
             if (parsed.columnOrder && Array.isArray(parsed.columnOrder)) {
-                setColumnOrder((prev) => {
+                setColumnOrder(() => {
                     const filtered = parsed.columnOrder.filter((id: string) => columnIds.includes(id));
                     const missing = columnIds.filter((id) => !filtered.includes(id));
                     return [...filtered, ...missing];

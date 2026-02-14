@@ -21,7 +21,6 @@ export default function DepartmentsPage() {
     const { getAccessToken, hasPermission } = useAuth();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [users, setUsers] = useState<UserRecord[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [name, setName] = useState('');
     const [isEditMode, setIsEditMode] = useState(false);
@@ -41,8 +40,6 @@ export default function DepartmentsPage() {
             setDepartments(response.data.data || []);
         } catch (error) {
             console.error('Failed to fetch departments:', error);
-        } finally {
-            setLoading(false);
         }
     }, [API_BASE, getAccessToken]);
 

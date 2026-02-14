@@ -32,7 +32,6 @@ export default function UsersPage() {
     const [users, setUsers] = useState<UserRecord[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -65,8 +64,6 @@ export default function UsersPage() {
             setUsers(response.data.data || []);
         } catch (error) {
             console.error('Failed to fetch users:', error);
-        } finally {
-            setLoading(false);
         }
     };
 

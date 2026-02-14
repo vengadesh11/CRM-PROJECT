@@ -333,7 +333,7 @@ export default function DealDetailPage() {
                                     <DetailRow label="Lead Source" value={currentDealLeadSourceName} />
                                     <DetailRow label="Service" value={currentServiceName} />
                                     <DetailRow label="Payment Status" value={deal?.payment_status} />
-                                    <DetailRow label="Closing Date" value={formatDateLabel(deal?.closing_date || deal?.expected_close_date)} />
+                                    <DetailRow label="Closing Date" value={formatDateLabel(deal?.closing_date || deal?.expected_close_date) ?? undefined} />
                                 </div>
                                 </div>
                             </>

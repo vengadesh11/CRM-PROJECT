@@ -581,13 +581,13 @@ export default function DealsPage() {
             const stored = localStorage.getItem(DEALS_COLUMN_PREF_KEY);
             if (!stored) return;
             const parsed = JSON.parse(stored);
-            if (parsed.columnOrder && Array.isArray(parsed.columnOrder)) {
-                setColumnOrder((prev) => {
-                    const filtered = parsed.columnOrder.filter((id: string) => columnIds.includes(id));
-                    const missing = columnIds.filter((id) => !filtered.includes(id));
-                    return [...filtered, ...missing];
-                });
-            }
+        if (parsed.columnOrder && Array.isArray(parsed.columnOrder)) {
+            setColumnOrder(() => {
+                const filtered = parsed.columnOrder.filter((id: string) => columnIds.includes(id));
+                const missing = columnIds.filter((id) => !filtered.includes(id));
+                return [...filtered, ...missing];
+            });
+        }
             if (parsed.visibleColumns && typeof parsed.visibleColumns === 'object') {
                 setVisibleColumns((prev) => {
                     const next: Record<string, boolean> = { ...prev, ...parsed.visibleColumns };

@@ -79,7 +79,8 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const [aiSmartFillText, setAiSmartFillText] = useState('');
     const importInputRef = React.useRef<HTMLInputElement>(null);
 
-    const fetchLeadQualificationFallback = async (token: string) => {
+    const fetchLeadQualificationFallback = async (token?: string | null) => {
+        if (!token) return [];
         try {
             const response = await axios.get(`${API_BASE}/sales-settings/lead-qualifications`, {
                 headers: { Authorization: `Bearer ${token}` }
