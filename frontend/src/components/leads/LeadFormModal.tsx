@@ -79,6 +79,21 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
     const [aiSmartFillText, setAiSmartFillText] = useState('');
     const importInputRef = React.useRef<HTMLInputElement>(null);
 
+    const fetchLeadQualificationFallback = async (token: string) => {
+        try {
+            const response = await axios.get(`${API_BASE}/sales-settings/lead-qualifications`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data?.success) {
+                return response.data.data || [];
+            }
+            console.warn('Lead qualification fallback returned unexpected payload:', response.data);
+        } catch (error) {
+            console.error('Failed to load fallback lead qualifications:', error);
+        }
+        return [];
+    };
+
     // Fetch Options
     useEffect(() => {
         if (!isOpen) return;
@@ -100,16 +115,31 @@ export default function LeadFormModal({ isOpen, onClose, onSubmit, mode = 'creat
                 }
 
                 if (optionsResult.status === 'fulfilled') {
-                    setLeadOptions(optionsResult.value.data.data || {
+                    let leadOptionsData = optionsResult.value.data.data || {
                         brands: [],
                         leadStatuses: [],
                         qualifications: [],
                         users: [],
                         leadSources: [],
-                        servicesRequired: []
-                    });
+                        servicesRequired: [],
+                        leadOwners: []
+                    };
+
+                    if (!leadOptionsData.qualifications || leadOptionsData.qualifications.length === 0) {
+                        leadOptionsData = {
+                            ...leadOptionsData,
+                            qualifications: await fetchLeadQualificationFallback(token)
+                        };
+                    }
+
+                    setLeadOptions(leadOptionsData);
                 } else {
                     console.error('Failed to load lead options:', optionsResult.reason);
+                    const fallbackQualifications = await fetchLeadQualificationFallback(token);
+                    setLeadOptions(prev => ({
+                        ...prev,
+                        qualifications: fallbackQualifications
+                    }));
                 }
             } catch (error) {
                 console.error('Unexpected error loading lead form data:', error);

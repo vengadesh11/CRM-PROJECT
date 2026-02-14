@@ -268,18 +268,45 @@ export const deleteItem = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        // We'll perform a soft delete by setting is_active = false
-        const { error } = await supabaseAdmin
-            .from(tableName)
-            .update({ is_active: false })
-            .eq('id', id);
+        try {
+            // We'll perform a soft delete by setting is_active = false
+            const { error } = await supabaseAdmin
+                .from(tableName)
+                .update({ is_active: false })
+                .eq('id', id);
 
-        if (error) throw error;
+            if (error) throw error;
 
-        res.json({
-            success: true,
-            message: 'Item deleted successfully'
-        });
+            res.json({
+                success: true,
+                message: 'Item deleted successfully'
+            });
+            return;
+        } catch (dbError: any) {
+            const isColumnError = dbError.message && (
+                dbError.message.includes('is_active') ||
+                dbError.message.includes('column') ||
+                dbError.message.includes('table') ||
+                dbError.message.includes('schema cache')
+            );
+
+            if (isColumnError) {
+                console.warn(`Column is_active missing on ${tableName}, performing hard delete.`);
+                const { error } = await supabaseAdmin
+                    .from(tableName)
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                res.json({
+                    success: true,
+                    message: 'Item deleted successfully (hard delete)'
+                });
+                return;
+            }
+            throw dbError;
+        }
     } catch (error: any) {
         console.error(`Failed to delete ${req.params.category} item:`, error);
         res.status(500).json({

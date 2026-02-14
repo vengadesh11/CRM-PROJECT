@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/MainLayout';
 import Button from '../components/ui/Button';
@@ -61,6 +61,15 @@ export default function LeadsPage() {
         leadSources: [],
         servicesRequired: []
     });
+    const leadSourceMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        (leadOptions.leadSources || []).forEach((source: any) => {
+            if (source?.id && source?.name) {
+                map[source.id] = source.name;
+            }
+        });
+        return map;
+    }, [leadOptions.leadSources]);
     const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
         sno: true,
         registration_date: true,
@@ -132,7 +141,15 @@ export default function LeadsPage() {
                     })
                 ]);
                 setCustomFields(fieldsRes.data.data || []);
-                setLeadOptions(optionsRes.data.data || {});
+                const optionsData = optionsRes.data.data || {};
+                setLeadOptions({
+                    brands: optionsData.brands || [],
+                    services: optionsData.services || [],
+                    qualifications: optionsData.qualifications || [],
+                    users: optionsData.users || [],
+                    leadSources: optionsData.leadSources || [],
+                    servicesRequired: optionsData.servicesRequired || []
+                });
             } catch (error) {
                 console.error('Failed to fetch metadata:', error);
             }
@@ -219,9 +236,7 @@ export default function LeadsPage() {
     };
 
     const openView = (lead: any) => {
-        setSelectedLead(lead);
-        setModalMode('view');
-        setIsModalOpen(true);
+        navigate(`/leads/${lead.id}`);
     };
 
     const openEdit = (lead: any) => {
@@ -466,7 +481,10 @@ export default function LeadsPage() {
             case 'status':
                 return lead.status || '';
             case 'lead_source':
-                return lead.lead_source || lead.source || '';
+                if (lead.source_data?.name) return lead.source_data.name;
+                if (lead.lead_source?.name) return lead.lead_source.name;
+                if (lead.lead_source && typeof lead.lead_source === 'object') return lead.lead_source.name ?? '';
+                return leadSourceMap[lead.lead_source] || lead.lead_source || lead.source || '';
             default:
                 return '';
         }
@@ -711,35 +729,77 @@ export default function LeadsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredLeads.map((lead, index) => (
-                                <tr key={lead.id} className="hover:bg-slate-800/30 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
-                                            checked={selectedIds.has(lead.id)}
-                                            onChange={() => handleSelectOne(lead.id)}
-                                        />
+                        {filteredLeads.map((lead, index) => (
+                            <tr
+                                key={lead.id}
+                                className="hover:bg-slate-800/30 transition-colors group cursor-pointer"
+                                role="button"
+                                onClick={() => openView(lead)}
+                            >
+                                <td className="px-6 py-4" onClick={(event) => event.stopPropagation()}>
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-white/20 bg-black/20 text-blue-500 focus:ring-offset-0"
+                                        checked={selectedIds.has(lead.id)}
+                                        onChange={() => handleSelectOne(lead.id)}
+                                    />
+                                </td>
+                                {orderedVisibleColumns.map((columnId) => (
+                                    <td key={columnId} className="px-6 py-4 text-sm text-white">
+                                        {formatLeadValue(lead, columnId, index)}
                                     </td>
-                                    {orderedVisibleColumns.map((columnId) => (
-                                        <td key={columnId} className="px-6 py-4 text-sm text-white">
-                                            {formatLeadValue(lead, columnId, index)}
-                                        </td>
-                                    ))}
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="text-gray-400 hover:text-emerald-500" title="Convert to Customer" onClick={() => { setLeadToConvert(lead); setIsConvertModalOpen(true); }}><ArrowPathRoundedSquareIcon className="w-4 h-4" /></button>
-                                            <button className="text-gray-400 hover:text-white" title="View" onClick={() => openView(lead)}><EyeIcon className="w-4 h-4" /></button>
-                                            {canEditLead && (
-                                                <button className="text-gray-400 hover:text-blue-400" title="Edit" onClick={() => openEdit(lead)}><PencilSquareIcon className="w-4 h-4" /></button>
-                                            )}
-                                            {canDeleteLead && (
-                                                <button className="text-gray-400 hover:text-red-400" title="Delete" onClick={() => handleDelete(lead.id)}><TrashIcon className="w-4 h-4" /></button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                ))}
+                                <td className="px-6 py-4 text-right">
+                                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            className="text-gray-400 hover:text-emerald-500"
+                                            title="Convert to Customer"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                setLeadToConvert(lead);
+                                                setIsConvertModalOpen(true);
+                                            }}
+                                        >
+                                            <ArrowPathRoundedSquareIcon className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            className="text-gray-400 hover:text-white"
+                                            title="View"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                openView(lead);
+                                            }}
+                                        >
+                                            <EyeIcon className="w-4 h-4" />
+                                        </button>
+                                        {canEditLead && (
+                                            <button
+                                                className="text-gray-400 hover:text-blue-400"
+                                                title="Edit"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    openEdit(lead);
+                                                }}
+                                            >
+                                                <PencilSquareIcon className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {canDeleteLead && (
+                                            <button
+                                                className="text-gray-400 hover:text-red-400"
+                                                title="Delete"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    handleDelete(lead.id);
+                                                }}
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                 </div>

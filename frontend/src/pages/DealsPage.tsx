@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import Layout from '../components/layout/MainLayout';
 import Button from '../components/ui/Button';
 import DealFormModal from '../components/deals/DealFormModal';
@@ -16,11 +17,13 @@ import {
     MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm';
 
 export default function DealsPage() {
+    const navigate = useNavigate();
     const { getAccessToken, hasPermission } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
@@ -56,6 +59,15 @@ export default function DealsPage() {
         leadSources: [],
         servicesRequired: []
     });
+    const dealLeadSourceMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        (leadOptions.leadSources || []).forEach((source: any) => {
+            if (source?.id && source?.name) {
+                map[source.id] = source.name;
+            }
+        });
+        return map;
+    }, [leadOptions.leadSources]);
     const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
         sno: true,
         cif: true,
@@ -129,7 +141,12 @@ export default function DealsPage() {
                     })
                 ]);
                 setCustomFields(fieldsRes.data.data || []);
-                setLeadOptions(optionsRes.data.data || {});
+                const optionsData = optionsRes.data.data || {};
+                setLeadOptions({
+                    brands: optionsData.brands || [],
+                    leadSources: optionsData.leadSources || [],
+                    servicesRequired: optionsData.servicesRequired || []
+                });
             } catch (error) {
                 console.error('Failed to fetch metadata:', error);
             }
@@ -216,9 +233,7 @@ export default function DealsPage() {
     };
 
     const openView = (deal: any) => {
-        setSelectedDeal(deal);
-        setModalMode('view');
-        setIsModalOpen(true);
+        navigate(`/deals/${deal.id}`);
     };
 
     const openEdit = (deal: any) => {
@@ -450,7 +465,10 @@ export default function DealsPage() {
             case 'contact_no':
                 return deal.contact_number || deal.contactNo || '';
             case 'lead_source':
-                return deal.source_data?.name || deal.lead_source || '';
+                if (deal.source_data?.name) return deal.source_data.name;
+                if (deal.lead_source?.name) return deal.lead_source.name;
+                if (deal.lead_source && typeof deal.lead_source === 'object') return deal.lead_source.name ?? '';
+                return dealLeadSourceMap[deal.lead_source] || deal.lead_source || '';
             case 'service_amount':
                 return deal.service_amount ?? deal.value ?? '';
             case 'service_closed':
@@ -703,35 +721,67 @@ export default function DealsPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredDeals.map((deal, index) => (
-                                <tr key={deal.id} className="hover:bg-[var(--surface-elevated)] transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white"
-                                            checked={selectedIds.has(deal.id)}
-                                            onChange={() => handleSelectOne(deal.id)}
-                                        />
+                        {filteredDeals.map((deal, index) => (
+                            <tr
+                                key={deal.id}
+                                className="hover:bg-[var(--surface-elevated)] transition-colors group cursor-pointer"
+                                role="button"
+                                onClick={() => openView(deal)}
+                            >
+                                <td className="px-6 py-4" onClick={(event) => event.stopPropagation()}>
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300 bg-white text-primary-500 focus:ring-offset-white"
+                                        checked={selectedIds.has(deal.id)}
+                                        onChange={() => handleSelectOne(deal.id)}
+                                    />
+                                </td>
+                                {orderedVisibleColumns.map((columnId) => (
+                                    <td key={columnId} className="px-6 py-4 text-sm text-white">
+                                        {formatDealValue(deal, columnId, index)}
                                     </td>
-                                    {orderedVisibleColumns.map((columnId) => (
-                                        <td key={columnId} className="px-6 py-4 text-sm text-white">
-                                            {formatDealValue(deal, columnId, index)}
-                                        </td>
-                                    ))}
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            <button className="text-gray-400 hover:text-white" title="View" onClick={() => openView(deal)}><EyeIcon className="w-4 h-4" /></button>
-                                            {canEditDeal && (
-                                                <button className="text-gray-400 hover:text-blue-400" title="Edit" onClick={() => openEdit(deal)}><PencilSquareIcon className="w-4 h-4" /></button>
-                                            )}
-                                            {canDeleteDeal && (
-                                                <button className="text-gray-400 hover:text-red-400" title="Delete" onClick={() => handleDelete(deal.id)}><TrashIcon className="w-4 h-4" /></button>
-                                            )}
-                                        </div>
+                                ))}
+                                <td className="px-6 py-4 text-right">
+                                    <div className="flex items-center justify-end gap-3">
+                                        <button
+                                            className="text-gray-400 hover:text-white"
+                                            title="View"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                openView(deal);
+                                            }}
+                                        >
+                                            <EyeIcon className="w-4 h-4" />
+                                        </button>
+                                        {canEditDeal && (
+                                            <button
+                                                className="text-gray-400 hover:text-blue-400"
+                                                title="Edit"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    openEdit(deal);
+                                                }}
+                                            >
+                                                <PencilSquareIcon className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                        {canDeleteDeal && (
+                                            <button
+                                                className="text-gray-400 hover:text-red-400"
+                                                title="Delete"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    handleDelete(deal.id);
+                                                }}
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
 
-                                    </td>
-                                </tr>
-                            ))}
+                                </td>
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                     {filteredDeals.length === 0 && (

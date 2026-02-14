@@ -185,16 +185,6 @@ export default function UsersPage() {
         return text.includes(searchTerm.toLowerCase());
     });
 
-    if (loading) {
-        return (
-            <Layout title="User Management">
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-white">Loading...</div>
-                </div>
-            </Layout>
-        );
-    }
-
     return (
         <Layout title="User Management">
             <div className="surface-panel overflow-hidden">

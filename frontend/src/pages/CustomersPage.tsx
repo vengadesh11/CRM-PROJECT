@@ -46,6 +46,16 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
+const CUSTOMERS_COLUMN_PREF_KEY = 'docuflow.customers.columns';
+const DEFAULT_CUSTOMER_VISIBLE_COLUMNS: Record<string, boolean> = {
+    cif: true,
+    company_name: true,
+    email: true,
+    mobile: true,
+    trn: true,
+    type: true
+};
+
 interface SortableItemProps {
     id: string;
     label: string;
@@ -152,21 +162,13 @@ export default function CustomersPage() {
     const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
     // Default Visible Columns
-    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-        cif: true,
-        company_name: true,
-        email: true,
-        mobile: true,
-        trn: true,
-        type: true
-    });
-
+    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(DEFAULT_CUSTOMER_VISIBLE_COLUMNS);
     const [columnOrder, setColumnOrder] = useState<string[]>([]);
 
-    const API_BASE = useMemo(
-        () => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm',
-        []
-    );
+const API_BASE = useMemo(
+    () => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api/crm',
+    []
+);
 
     const canCreateCustomer = hasPermission('customers.create');
     const canEditCustomer = hasPermission('customers.edit');
@@ -208,6 +210,36 @@ export default function CustomersPage() {
             setColumnOrder([...existing, ...missing]);
         }
     }, [columnIds]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(CUSTOMERS_COLUMN_PREF_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.visibleColumns) {
+                    setVisibleColumns(prev => ({ ...prev, ...parsed.visibleColumns }));
+                }
+                if (parsed.columnOrder && Array.isArray(parsed.columnOrder) && parsed.columnOrder.length > 0) {
+                    setColumnOrder(parsed.columnOrder);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load column preferences for customers:', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        const missing = columnIds.filter(id => !(id in visibleColumns));
+        if (missing.length > 0) {
+            setVisibleColumns(prev => {
+                const next = { ...prev };
+                missing.forEach(id => {
+                    next[id] = true;
+                });
+                return next;
+            });
+        }
+    }, [columnIds, visibleColumns]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -353,6 +385,22 @@ export default function CustomersPage() {
         }
     };
 
+    const persistCustomerColumnPreferences = () => {
+        try {
+            localStorage.setItem(CUSTOMERS_COLUMN_PREF_KEY, JSON.stringify({
+                columnOrder,
+                visibleColumns
+            }));
+        } catch (error) {
+            console.error('Failed to persist customer column preferences:', error);
+        }
+    };
+
+    const handleSaveCustomerColumns = () => {
+        persistCustomerColumnPreferences();
+        setIsColumnsModalOpen(false);
+    };
+
     const formatCustomerValue = (customer: any, id: string) => {
         let raw = customer[id];
         if (id.startsWith('custom:')) {
@@ -488,7 +536,7 @@ export default function CustomersPage() {
                 </div>
             ) : (
                 /* Split View Layout */
-                <div className="fixed inset-0 z-[40] flex ml-0 md:ml-64 mt-16 bg-[var(--surface-page)]">
+                <div className="fixed inset-0 z-[40] flex mt-16 bg-[var(--surface-page)]">
                     {/* Left Sidebar List */}
                     <div className="w-80 md:w-96 border-r border-[var(--surface-border)] flex flex-col h-full bg-[var(--surface-panel)]">
                         <div className="p-6 pb-2">
@@ -656,7 +704,7 @@ export default function CustomersPage() {
                 </div>
 
                 <div className="flex justify-end mt-8 pt-6 border-t border-gray-100">
-                    <Button onClick={() => setIsColumnsModalOpen(false)} variant="primary" className="px-10">Save Configuration</Button>
+                    <Button onClick={handleSaveCustomerColumns} variant="primary" className="px-10">Save Configuration</Button>
                 </div>
             </Modal>
 

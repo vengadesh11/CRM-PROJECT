@@ -127,16 +127,6 @@ export default function DepartmentsPage() {
         return acc;
     }, {});
 
-    if (loading) {
-        return (
-            <Layout title="Departments">
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-white">Loading...</div>
-                </div>
-            </Layout>
-        );
-    }
-
     return (
         <Layout title="Departments">
             <div className="surface-panel overflow-hidden">
